@@ -29,7 +29,7 @@ namespace
             | views::transform([&](const auto& v) { return make_tuple(v, fs::file_size(v), rel_path_make(v, base_path)); }),
             fs::directory_iterator(dir)
             | views::transform([](const auto& v) { return fs::path(v); })
-            | views::filter([](const auto& v) { return fs::is_directory(v) && v.filename().wstring() != L".." && v.filename().wstring() != L"."; }));
+            | views::filter([](const auto& v) { return fs::is_directory(v); }));
     }
 
     auto path_proj = [](const auto& v)
@@ -71,92 +71,102 @@ namespace pak_impl
         m_files.clear();
         if (fs::create_directory(path))
         {
-            m_opened_write = true;
             m_base_path = path;
-        }
-    
-        return m_opened_write;
-    }
-
-    bool fs_pack_c::open_entry_impl(const wstring& name)
-    {
-        if (m_opened_write == false)
-        {
-            const auto entry = to_lower_copy(name);
-            if (auto r = ranges::lower_bound(m_files, entry, {}, path_proj);
-                r != end(m_files) && r->path == entry)
-            {
-                m_file.open(r->syspath, ios::in | ios::binary);
-                return m_file.is_open();
-            }
+            return true;
         }
         return false;
     }
-    
-    bool fs_pack_c::new_entry_impl(const wstring& name)
+
+    bool fs_pack_c::open_entry_impl(size_t idx)
     {
-        if (m_opened_write)
+        m_infile.open(m_files[idx].syspath, ios::in | ios::binary);
+        return m_infile.is_open();
+    }
+
+    optional<size_t> fs_pack_c::find_entry(const std::wstring& name) const
+    {
+        const auto entry = to_lower_copy(name);
+        if (auto r = ranges::lower_bound(m_files, entry, {}, path_proj);
+            r != end(m_files) && r->path == entry)
         {
-            const auto entry = to_lower_copy(name);
-            if (auto r = ranges::lower_bound(m_files, entry, {}, path_proj);
-                r != end(m_files) && r->path == entry)
-            {
-                emit_warning(name, L"Duplicate entry");
-                return false;
-            }
-            else
-            {
-                auto parts = name | views::split(L'/')
-                    | views::transform([](const auto& v) { return wstring(begin(v), end(v)); });
-                const vector path_parts(begin(parts), end(parts));
-
-                constexpr wchar_t sep[] = { fs::path::preferred_separator, L'\0' };
-
-                m_files.emplace_back();
-                m_files.back().path = entry;
-                m_files.back().syspath = boost::join(path_parts, sep);
-
-                m_file.open(m_files.back().syspath, ios::out | ios::binary);
-                if (m_file.is_open())
-                    return true;
-                m_files.pop_back();
-            }
+            return static_cast<size_t>(distance(begin(m_files), r));
         }
-        return false;
+        return {};
+    }
+    
+    optional<size_t> fs_pack_c::new_entry_impl(const wstring& name)
+    {
+        auto parts = name | views::split(L'/')
+            | views::transform([](const auto& v) { return wstring(begin(v), end(v)); });
+        const vector path_parts(begin(parts), end(parts));
+
+        constexpr wchar_t sep[] = { static_cast<wchar_t>(fs::path::preferred_separator), L'\0' };
+
+        const auto idx = m_files.size();
+        m_files.emplace_back();
+        m_files.back().path = to_lower_copy(name);
+        m_files.back().syspath = boost::join(path_parts, sep);
+
+        m_outfile.open(m_files.back().syspath, ios::binary);
+        if (m_outfile.is_open())
+            return idx;
+        
+        m_files.pop_back();
+        return {};
     }
     
     size_t fs_pack_c::read_entry_impl(uint8_t* buf, size_t sz)
     {
-        if (m_file.is_open() && !m_opened_write)
+        if (m_infile.is_open())
         {
-            m_file.read(reinterpret_cast<char*>(buf), sz);
-            return static_cast<size_t>(m_file.gcount());
+            m_infile.read(reinterpret_cast<char*>(buf), sz);
+            return static_cast<size_t>(m_infile.gcount());
         }
         return 0;
     }
 
     size_t fs_pack_c::write_entry_impl(const std::uint8_t* buf, size_t size)
     {
-        if (m_file.is_open() && m_opened_write)
+        if (m_outfile.is_open())
         {
-            m_file.write(reinterpret_cast<const char*>(buf), size);
-            if (m_file.fail())
-            {
+            m_outfile.write(reinterpret_cast<const char*>(buf), size);
+            if (m_outfile.fail())
                 return 0;
-            }
+
             return size;
         }
         return 0;
     }
     
-    void fs_pack_c::close_entry_impl()
+    void fs_pack_c::close_read_impl()
     {
-        if (m_file.is_open())
-            m_file.close();
+        if (m_infile.is_open())
+            m_infile.close();
+    }
+
+    void fs_pack_c::close_write_impl()
+    {
+        if (m_outfile.is_open())
+            m_outfile.close();
+    }
+
+    bool fs_pack_c::close_pack_impl()
+    {
+        if (m_infile.is_open())
+            m_infile.close();
+        if (m_outfile.is_open())
+            m_outfile.close();
+        m_files.clear();
+        return true;
     }
 
     size_t fs_pack_c::max_filename_len_impl() const
     {
         return PATH_MAX;
+    }
+
+    size_t fs_pack_c::max_filename_count() const
+    {
+        return numeric_limits<size_t>::max();
     }
 }

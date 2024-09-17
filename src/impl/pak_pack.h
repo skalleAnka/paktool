@@ -1,12 +1,11 @@
-#ifndef FS_PACK_H_INCLUDED
-#define FS_PACK_H_INCLUDED
+#ifndef PAK_PACK_H_INCLUDED
+#define PAK_PACK_H_INCLUDED
 #include "../pack.h"
-#include <vector>
 #include <fstream>
 
 namespace pak_impl
 {
-    class fs_pack_c : public pak::pack_i
+    class pak_pack_c : public pak::pack_i
     {
     protected:
         bool open_pack_impl(const std::filesystem::path& path) override;
@@ -22,25 +21,17 @@ namespace pak_impl
         size_t max_filename_len_impl() const override;
         size_t max_filename_count() const override;
     private:
+        std::fstream m_pakfile;
+        size_t m_totread = 0;
+        std::streamoff m_write_offs = 0;
+        
         struct entry_t
         {
-            std::filesystem::path syspath;
-            std::int64_t size = 0LL;
-            std::wstring path;
-            entry_t() = default;
-            entry_t(const std::tuple<std::filesystem::path, std::int64_t, std::wstring>& e)
-                :syspath(std::get<0>(e)), size(std::get<1>(e)), path(std::get<2>(e))
-            {
-            }
+            std::streamoff pos = 0;
+            std::size_t len = 0;
+            std::wstring name;
         };
         std::vector<entry_t> m_files;
-        std::filesystem::path m_base_path;
-        
-        std::ifstream m_infile;
-        std::ofstream m_outfile; 
-
-        void read_contents(const std::filesystem::path& path, const std::filesystem::path& base_path);
     };
 }
-
 #endif

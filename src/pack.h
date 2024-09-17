@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <optional>
 
 namespace pak
 {
@@ -17,22 +18,35 @@ namespace pak
         //Implement these and add creation to open_pack/create_pack to add a pack format
         virtual bool open_pack_impl(const std::filesystem::path& path) = 0;
         virtual bool create_pack_impl(const std::filesystem::path& path) = 0;
-        virtual bool open_entry_impl(const std::wstring& name) = 0;
-        virtual bool new_entry_impl(const std::wstring& name) = 0;
+        virtual bool open_entry_impl(size_t idx) = 0;
+        virtual std::optional<size_t> new_entry_impl(const std::wstring& name) = 0;
+        virtual std::optional<size_t> find_entry(const std::wstring& name) const = 0;
         virtual size_t read_entry_impl(std::uint8_t* buf, size_t sz) = 0;
         virtual size_t write_entry_impl(const std::uint8_t* buf, size_t size) = 0;
-        virtual void close_entry_impl() = 0;
+        virtual void close_write_impl() = 0;
+        virtual void close_read_impl() = 0;
         virtual size_t max_filename_len_impl() const = 0;
+        virtual size_t max_filename_count() const = 0;
+        virtual bool close_pack_impl() = 0;
 
         void emit_warning(const std::wstring& entry, const std::wstring& message)
         {
             if (m_warn_func)
                 m_warn_func(entry, message);
         }
+
+        bool m_opened_write = false;
+        std::optional<size_t> m_read_idx, m_write_idx;
     public:
-        virtual ~pack_i()
-        {
-        }
+        virtual ~pack_i() = default;
+
+        bool new_entry(const std::wstring& name);
+        bool open_entry(const std::wstring& name);
+
+        void close_read_entry();
+        void close_write_entry();
+
+        bool close_pack();
 
         using warning_func_t = std::function<void(std::wstring, std::wstring)>;
 
