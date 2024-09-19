@@ -2,6 +2,7 @@
 #include <boost/endian.hpp>
 #include <boost/locale.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/core/ignore_unused.hpp>
 #include <string_view>
 #include <format>
 #include "pakutil.h"
@@ -35,9 +36,13 @@ namespace pak_impl
 {
     static constexpr auto PACK = "PACK"sv;
 
-    bool pak_pack_c::open_pack_impl(const fs::path& path)
+    bool pak_pack_c::open_pack_impl(const fs::path& path, bool w)
     {
-        m_pakfile.open(path, ios::in | ios::binary);
+        auto oflags = ios::in | ios::binary;
+        if (w)
+            oflags |= ios::out;
+
+        m_pakfile.open(path, oflags);
         if (m_pakfile.is_open())
         {
             char buf[4];
@@ -123,9 +128,18 @@ namespace pak_impl
 
         return m_pakfile.is_open();
     }
-    
-    optional<size_t> pak_pack_c::new_entry_impl(const wstring& name)
+
+    optional<pak::pack_i::filetime_t> pak_pack_c::entry_timestamp_impl(size_t idx) const
     {
+        //Pak just doesn't support time stamps
+        boost::ignore_unused(idx);
+        return {};
+    }
+    
+    optional<size_t> pak_pack_c::new_entry_impl(const wstring& name, const std::optional<filetime_t>& ft)
+    {
+        boost::ignore_unused(ft);
+
         const auto idx = m_files.size();
         m_files.emplace_back();
         m_files.back().name = name;
@@ -248,5 +262,15 @@ namespace pak_impl
     size_t pak_pack_c::max_filename_count() const
     {
         return 2048;
+    }
+
+    size_t pak_pack_c::entry_count() const
+    {
+        return m_files.size();
+    }
+
+    const wstring& pak_pack_c::entry_name(size_t idx) const
+    {
+        return m_files[idx].name;
     }
 }

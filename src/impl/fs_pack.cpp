@@ -2,6 +2,7 @@
 #include <ranges>
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
+#include <boost/core/ignore_unused.hpp>
 #ifndef _WIN32
 #include <limits.h>
 #endif
@@ -40,8 +41,10 @@ namespace
 
 namespace pak_impl
 {
-    bool fs_pack_c::open_pack_impl(const fs::path& path)
+    bool fs_pack_c::open_pack_impl(const fs::path& path, bool w)
     {
+        boost::ignore_unused(w);
+
         if (!fs::is_directory(path))
             return false;
         
@@ -93,8 +96,14 @@ namespace pak_impl
         }
         return {};
     }
+
+    optional<pak::pack_i::filetime_t> fs_pack_c::entry_timestamp_impl(size_t idx) const
+    {
+        using namespace chrono;
+        return time_point_cast<seconds>(clock_cast<system_clock>(fs::last_write_time(m_files[idx].syspath)));
+    }
     
-    optional<size_t> fs_pack_c::new_entry_impl(const wstring& name)
+    optional<size_t> fs_pack_c::new_entry_impl(const wstring& name, const std::optional<filetime_t>& ft)
     {
         auto parts = name | views::split(L'/')
             | views::transform([](const auto& v) { return wstring(begin(v), end(v)); });
@@ -109,7 +118,10 @@ namespace pak_impl
 
         m_outfile.open(m_files.back().syspath, ios::binary);
         if (m_outfile.is_open())
+        {
+            m_pending_ft = ft;
             return idx;
+        }
         
         m_files.pop_back();
         return {};
@@ -147,15 +159,18 @@ namespace pak_impl
     void fs_pack_c::close_write_impl()
     {
         if (m_outfile.is_open())
+        {
             m_outfile.close();
+            if (m_pending_ft)
+                fs::last_write_time(m_files[*m_write_idx].syspath, chrono::file_clock::from_sys(*m_pending_ft));
+            m_pending_ft.reset();
+        }
     }
 
     bool fs_pack_c::close_pack_impl()
     {
-        if (m_infile.is_open())
-            m_infile.close();
-        if (m_outfile.is_open())
-            m_outfile.close();
+        close_read_impl();
+        close_write_impl();
         m_files.clear();
         return true;
     }
@@ -168,5 +183,15 @@ namespace pak_impl
     size_t fs_pack_c::max_filename_count() const
     {
         return numeric_limits<size_t>::max();
+    }
+
+    size_t fs_pack_c::entry_count() const
+    {
+        return m_files.size();
+    }
+    
+    const wstring& fs_pack_c::entry_name(size_t idx) const
+    {
+        return m_files[idx].path;
     }
 }
