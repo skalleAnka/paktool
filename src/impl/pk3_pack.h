@@ -15,7 +15,6 @@ namespace pak_impl
         bool open_entry_impl(size_t idx) override;
         std::optional<filetime_t> entry_timestamp_impl(size_t idx) const override;
         std::optional<size_t> new_entry_impl(const std::wstring& name, const std::optional<filetime_t>& ft) override;
-        std::optional<size_t> find_entry(const std::wstring& name) const override;
         size_t read_entry_impl(std::uint8_t* buf, size_t sz) override;
         size_t write_entry_impl(const std::uint8_t* buf, size_t size) override;
         bool close_pack_impl() override;

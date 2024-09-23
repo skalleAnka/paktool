@@ -154,13 +154,6 @@ namespace pak_impl
         return {};
     }
 
-    optional<size_t> pak_pack_c::find_entry(const std::wstring& name) const
-    {
-        if (auto r = ranges::find(m_files, name, [](const auto& v) { return v.name; }); r != end(m_files))
-            return static_cast<size_t>(distance(begin(m_files), r));
-        return {}; 
-    }
-
     size_t pak_pack_c::read_entry_impl(uint8_t* buf, size_t sz)
     {
         if (m_pakfile.is_open())

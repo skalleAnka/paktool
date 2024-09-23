@@ -86,17 +86,6 @@ namespace pak_impl
         return m_infile.is_open();
     }
 
-    optional<size_t> fs_pack_c::find_entry(const std::wstring& name) const
-    {
-        const auto entry = to_lower_copy(name);
-        if (auto r = ranges::lower_bound(m_files, entry, {}, path_proj);
-            r != end(m_files) && r->path == entry)
-        {
-            return static_cast<size_t>(distance(begin(m_files), r));
-        }
-        return {};
-    }
-
     optional<pak::pack_i::filetime_t> fs_pack_c::entry_timestamp_impl(size_t idx) const
     {
         using namespace chrono;

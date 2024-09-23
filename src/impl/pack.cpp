@@ -52,6 +52,7 @@ namespace pak
             case mode::read_only:
                 if (!ppak->open_pack_impl(path, ppak->m_opened_write))
                     return nullptr;
+                ppak->rebuild_idx();
                 break;
             }
         }
@@ -97,6 +98,19 @@ namespace pak
         return false;
     }
 
+    optional<size_t> pack_i::find_entry(const wstring& name) const
+    {
+        auto names = m_file_idx
+            | views::transform([this](auto v) { return boost::to_lower_copy(entry_name(v)); });
+
+        if (auto r = ranges::lower_bound(names, boost::to_lower_copy(name));
+            r != end(names) && boost::iequals(name, *r))
+        {
+            return *r.base();
+        }
+        return {};
+    }
+
     void pack_i::close_read_entry()
     {
         if (m_read_idx.has_value())
@@ -109,6 +123,7 @@ namespace pak
         if (m_write_idx.has_value())
             close_write_impl();
         m_write_idx.reset();
+        rebuild_idx();
     }
 
     bool pack_i::close_pack()

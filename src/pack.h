@@ -7,6 +7,9 @@
 #include <functional>
 #include <optional>
 #include <chrono>
+#include <ranges>
+#include <algorithm>
+#include <boost/algorithm/string.hpp>
 
 namespace pak
 {
@@ -27,7 +30,6 @@ namespace pak
         virtual bool open_entry_impl(size_t idx) = 0;
         virtual std::optional<filetime_t> entry_timestamp_impl(size_t idx) const = 0;
         virtual std::optional<size_t> new_entry_impl(const std::wstring& name, const std::optional<filetime_t>& ft) = 0;
-        virtual std::optional<size_t> find_entry(const std::wstring& name) const = 0;
         virtual size_t read_entry_impl(std::uint8_t* buf, size_t sz) = 0;
         virtual size_t write_entry_impl(const std::uint8_t* buf, size_t size) = 0;
         virtual void close_write_impl() = 0;
@@ -43,6 +45,8 @@ namespace pak
             if (m_warn_func)
                 m_warn_func(entry, message);
         }
+
+        std::optional<size_t> find_entry(const std::wstring& name) const;
 
         bool m_opened_write = false;
         std::optional<size_t> m_read_idx, m_write_idx;
@@ -63,9 +67,26 @@ namespace pak
 
         bool close_pack();
 
+        auto file_names() const
+        {
+            return std::views::iota(entry_count())
+                | std::views::transform([this](auto v) { return std::wstring_view{ entry_name(v) }; }); 
+        }
+
         static std::unique_ptr<pack_i> open_pack(const std::filesystem::path& path, mode m, warning_func_t warn_func = nullptr);
     private:
         warning_func_t m_warn_func;
+        std::vector<size_t> m_file_idx;
+
+        void rebuild_idx()
+        {
+            auto new_idx = std::views::iota(entry_count());
+            std::vector<size_t> file_idx;
+            file_idx.reserve(entry_count());
+            std::ranges::copy(new_idx, back_inserter(file_idx));
+            std::ranges::sort(file_idx, {}, [this](auto v) { return boost::to_lower_copy(entry_name(v)); });
+            m_file_idx = std::move(file_idx);
+        }
     };
 }
  #endif

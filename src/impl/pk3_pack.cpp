@@ -241,7 +241,7 @@ namespace pak_impl
             if (m_zin)
             {
                 close_read_impl();
-                if (!open_pack_impl(m_filepath, true))
+                if (!open_pack_impl(m_filepath, false))
                     throw runtime_error("Reopen failed.");
             }
         }
@@ -271,5 +271,15 @@ namespace pak_impl
     const wstring& pk3_pack_c::entry_name(size_t idx) const
     {
         return m_files[idx].name;
+    }
+
+    size_t pk3_pack_c::max_filename_len_impl() const
+    {
+        return numeric_limits<uint16_t>::max() - 1;
+    }
+    
+    size_t pk3_pack_c::max_filename_count() const
+    {
+        return numeric_limits<uint32_t>::max();
     }
 };
