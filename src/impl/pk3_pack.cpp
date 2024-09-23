@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    optional<pak::pack_i::filetime_t> convert_time(const tm_unz& ztime)
+    optional<pak::pack_i::filetime_t> convert_time(const tm_unz& ztime) noexcept
     {
         using namespace chrono;
 
@@ -160,10 +160,17 @@ namespace pak_impl
                 ? boost::locale::conv::utf_to_utf<wchar_t, char>(filename.data())
                 : boost::locale::conv::to_utf<wchar_t>(filename.data(), "CP437");
             
-            m_files.back().ts = convert_time(info.tmu_date);
+            if (m_files.back().name.ends_with('/'))
+            {
+                m_files.pop_back();
+            }
+            else
+            {
+                m_files.back().ts = convert_time(info.tmu_date);
 
-            if (unzGetFilePos64(m_zin, &m_files.back().pos) != UNZ_OK)
-                return cancelret();
+                if (unzGetFilePos64(m_zin, &m_files.back().pos) != UNZ_OK)
+                    return cancelret();
+            }
         }
 
         if (w)
@@ -221,10 +228,33 @@ namespace pak_impl
         if (zipOpenNewFileInZip64(m_zout, filename.c_str(), &zfi, nullptr, 0u,
             nullptr, 0u, nullptr, Z_DEFLATED, Z_BEST_COMPRESSION, 0) == ZIP_OK)
         {
-            m_files.emplace_back(entry_t{ .name = name });
+            m_files.emplace_back(entry_t{ .name = name, .ts = {} });
             return m_files.size() -1;
         }
         return {};
+    }
+
+    size_t pk3_pack_c::read_entry_impl(std::uint8_t* buf, size_t sz)
+    {
+        if (m_zin == nullptr || sz > numeric_limits<int>::max())
+            return 0;
+
+        if (const auto r = unzReadCurrentFile(m_zin, buf, static_cast<unsigned>(sz)); r >= 0)
+        {
+            return static_cast<size_t>(r);
+        }
+        return 0;
+    }
+    
+    size_t pk3_pack_c::write_entry_impl(const std::uint8_t* buf, size_t size)
+    {
+        if (m_zout == nullptr || size > numeric_limits<unsigned>::max())
+            return 0;
+
+        if (zipWriteInFileInZip(m_zout, buf, static_cast<unsigned>(size)) == ZIP_OK)
+            return size;
+        
+        return 0;
     }
 
     void pk3_pack_c::close_read_impl()

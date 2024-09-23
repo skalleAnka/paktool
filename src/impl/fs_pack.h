@@ -31,7 +31,7 @@ namespace pak_impl
             std::wstring path;
             entry_t() = default;
             entry_t(const std::tuple<std::filesystem::path, std::int64_t, std::wstring>& e)
-                :syspath(std::get<0>(e)), size(std::get<1>(e)), path(std::get<2>(e))
+                : syspath(std::get<0>(e)), size(std::get<1>(e)), path(std::get<2>(e))
             {
             }
         };

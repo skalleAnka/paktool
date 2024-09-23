@@ -51,13 +51,13 @@ namespace pak_impl
                 return false;
             
             int32_t ft_offset = 0, ft_size = 0;
-            m_pakfile.read(reinterpret_cast<char*>(ft_offset), sizeof(ft_offset));
+            m_pakfile.read(reinterpret_cast<char*>(&ft_offset), sizeof(ft_offset));
             if (m_pakfile.gcount() != 4)
                 return false;
             ft_offset = boost::endian::native_to_little(ft_offset);
             m_write_offs = ft_offset;
 
-            m_pakfile.read(reinterpret_cast<char*>(ft_size), sizeof(ft_size));
+            m_pakfile.read(reinterpret_cast<char*>(&ft_size), sizeof(ft_size));
             if (m_pakfile.gcount() != 4)
                 return false;
             ft_size = boost::endian::native_to_little(ft_size);
@@ -77,12 +77,12 @@ namespace pak_impl
                     return false;
                 
                 int32_t offset = 0, size = 0;
-                m_pakfile.read(reinterpret_cast<char*>(offset), sizeof(offset));
-                if (m_pakfile.gcount() != offset)
+                m_pakfile.read(reinterpret_cast<char*>(&offset), sizeof(offset));
+                if (m_pakfile.gcount() != sizeof(offset))
                     return false;
                 offset = boost::endian::native_to_little(offset);
 
-                m_pakfile.read(reinterpret_cast<char*>(size), sizeof(size));
+                m_pakfile.read(reinterpret_cast<char*>(&size), sizeof(size));
                 if (m_pakfile.gcount() != sizeof(size))
                     return false;
                 size = boost::endian::native_to_little(offset);

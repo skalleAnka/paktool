@@ -16,13 +16,13 @@ namespace
     auto rel_path_make(const fs::path& path, const fs::path& base_path)
     {
         auto subpath = path
-            | views::drop(distance(begin(base_path), end(base_path)))
+            | views::drop(distance(begin(base_path), end(base_path)) - 1)
             | views::transform([](const auto& v) { return to_lower_copy(v.wstring()); });
         
         return boost::join(vector(begin(subpath), end(subpath)), L"/");
     }
 
-    auto list_dir_contents(const fs::path& dir, const fs::path base_path)
+    auto list_dir_contents(const fs::path& dir, const fs::path& base_path)
     {
         return make_tuple(fs::directory_iterator(dir)
             | views::transform([](const auto& v) { return fs::path(v); })
@@ -32,11 +32,6 @@ namespace
             | views::transform([](const auto& v) { return fs::path(v); })
             | views::filter([](const auto& v) { return fs::is_directory(v); }));
     }
-
-    auto path_proj = [](const auto& v)
-    {
-        return v.path;
-    };
 }
 
 namespace pak_impl
@@ -53,7 +48,6 @@ namespace pak_impl
         
         read_contents(path, path);
 
-        ranges::sort(m_files, {}, path_proj);
         m_base_path = path;
         return true;
     }

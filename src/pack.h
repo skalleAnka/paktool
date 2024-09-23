@@ -69,7 +69,7 @@ namespace pak
 
         auto file_names() const
         {
-            return std::views::iota(entry_count())
+            return m_file_idx
                 | std::views::transform([this](auto v) { return std::wstring_view{ entry_name(v) }; }); 
         }
 
@@ -80,10 +80,9 @@ namespace pak
 
         void rebuild_idx()
         {
-            auto new_idx = std::views::iota(entry_count());
             std::vector<size_t> file_idx;
             file_idx.reserve(entry_count());
-            std::ranges::copy(new_idx, back_inserter(file_idx));
+            std::ranges::copy(std::views::iota(size_t(0)) | std::views::take(entry_count()), back_inserter(file_idx));
             std::ranges::sort(file_idx, {}, [this](auto v) { return boost::to_lower_copy(entry_name(v)); });
             m_file_idx = std::move(file_idx);
         }
