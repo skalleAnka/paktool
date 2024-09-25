@@ -65,6 +65,9 @@ namespace pak
         void close_read_entry();
         void close_write_entry();
 
+        size_t read(std::uint8_t* data, size_t sz);
+        size_t write(const std::uint8_t* data, size_t sz);
+
         bool close_pack();
 
         auto file_names() const

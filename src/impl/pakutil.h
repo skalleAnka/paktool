@@ -17,7 +17,7 @@ namespace pak_impl
     {
         return std::ranges::find_if(str,
             [](auto v) { return v < 32; },
-            [](auto v) { return static_cast<int>(v); }) == end(str);
+            [](auto v) { return static_cast<int>(v); }) != end(str);
     }
 }
 

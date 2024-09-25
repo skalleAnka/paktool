@@ -82,8 +82,8 @@ namespace pak
             emit_warning(name, L"Duplicate entry."s);
             return false;
         }
-        m_read_idx = new_entry_impl(name, ft);
-        return m_read_idx.has_value();
+        m_write_idx = new_entry_impl(name, ft);
+        return m_write_idx.has_value();
     }
 
     bool pack_i::open_entry(const wstring& name)
@@ -109,6 +109,20 @@ namespace pak
             return *r.base();
         }
         return {};
+    }
+
+    size_t pack_i::read(uint8_t* data, size_t sz)
+    {
+        if (m_read_idx)
+            return read_entry_impl(data, sz);
+        return 0;
+    }
+
+    size_t pack_i::write(const uint8_t* data, size_t sz)
+    {
+        if (m_write_idx)
+            return write_entry_impl(data, sz);
+        return 0;
     }
 
     void pack_i::close_read_entry()

@@ -102,7 +102,7 @@ namespace pak_impl
 
     bool pak_pack_c::create_pack_impl(const fs::path& path)
     {
-        m_pakfile.open(path, ios::binary | ios::out | ios::in);
+        m_pakfile.open(path, ios::binary | ios::out | ios::in | ios::trunc);
         if (!m_pakfile.is_open())
             return false;
         
@@ -201,7 +201,7 @@ namespace pak_impl
     void pak_pack_c::close_write_impl()
     {
         const auto final_pos = static_cast<int64_t>(m_pakfile.tellp());
-        const auto dir_size = static_cast<int64_t>(m_files.size() + sizeof(int32_t) * 2 + 1 + max_filename_len_impl());
+        const auto dir_size = static_cast<int64_t>(m_files.size() * (sizeof(int32_t) * 2 + 1 + max_filename_len_impl()));
 
         if (const auto sz = final_pos + dir_size; sz > numeric_limits<int32_t>::max())
             throw runtime_error(format("PAK file size too large ({}) bytes.", sz));
@@ -226,25 +226,27 @@ namespace pak_impl
                 {
                     const auto sz = boost::endian::native_to_little(static_cast<int32_t>(v.len));
                     m_pakfile.write(reinterpret_cast<const char*>(&sz), sizeof(sz));
-                    if (!m_pakfile.fail())
-                    {
-                        m_pakfile.seekp(PACK.length(), ios::beg);
-                        if (!m_pakfile.fail())
-                        {
-                            const auto diroffs = boost::endian::native_to_little(static_cast<int32_t>(final_pos));
-                            const auto dirsize = boost::endian::native_to_little(static_cast<int32_t>(dir_size));
-                            m_pakfile.write(reinterpret_cast<const char*>(&diroffs), sizeof(diroffs));
-                            if (!m_pakfile.fail())
-                                m_pakfile.write(reinterpret_cast<const char*>(&dirsize), sizeof(dirsize));
-                        }
-                    }
                 }
             }
-
-            if (m_pakfile.fail())
-                throw runtime_error("Write fail.");
-            m_write_offs = final_pos;
         }
+        m_pakfile.flush();
+        if (!m_pakfile.fail())
+        {
+            m_pakfile.seekp(PACK.length(), ios::beg);
+            if (!m_pakfile.fail())
+            {
+                const auto diroffs = boost::endian::native_to_little(static_cast<int32_t>(final_pos));
+                const auto dirsize = boost::endian::native_to_little(static_cast<int32_t>(dir_size));
+                m_pakfile.write(reinterpret_cast<const char*>(&diroffs), sizeof(int32_t));
+                if (!m_pakfile.fail())
+                    m_pakfile.write(reinterpret_cast<const char*>(&dirsize), sizeof(int32_t));
+            }
+        }
+        m_pakfile.flush();
+        m_pakfile.seekp(final_pos);
+        if (m_pakfile.fail())
+            throw runtime_error("Write fail.");
+        m_write_offs = final_pos;
     }
 
     size_t pak_pack_c::max_filename_len_impl() const
