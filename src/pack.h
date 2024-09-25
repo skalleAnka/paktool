@@ -6,10 +6,10 @@
 #include <filesystem>
 #include <functional>
 #include <optional>
-#include <chrono>
 #include <ranges>
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
+#include <boost/date_time/posix_time/ptime.hpp>
 
 namespace pak
 {
@@ -17,7 +17,7 @@ namespace pak
     {
     public:
         using warning_func_t = std::function<void(std::wstring, std::wstring)>;
-        using filetime_t = std::chrono::sys_time<std::chrono::seconds>;
+        using filetime_t = boost::posix_time::ptime;
 
         enum class mode { read_only, read_write, rw_new };
     protected:
@@ -57,6 +57,10 @@ namespace pak
 
         bool new_entry(const std::wstring& name, const std::optional<filetime_t>& ft = {});
         bool open_entry(const std::wstring& name);
+        bool contains_entry(const std::wstring& name) const
+        {
+             return find_entry(name).has_value();
+        }
         std::optional<filetime_t> entry_timestamp() const
         {
             return m_read_idx ? entry_timestamp_impl(*m_read_idx) : std::nullopt;

@@ -35,6 +35,8 @@ namespace pak
             ppak = make_unique<pak_impl::pak_pack_c>();
         else if (boost::iequals(ext, PK3))
             ppak = make_unique<pak_impl::pk3_pack_c>();
+        else if (ext.empty() && m == mode::rw_new && fs::is_directory(path.parent_path()))
+            ppak = make_unique<pak_impl::fs_pack_c>();
 
         if (ppak)
         {
@@ -45,7 +47,7 @@ namespace pak
             switch (m)
             {
             case mode::rw_new:
-                if (!ppak->create_pack_impl(path))
+                if (!ppak->create_pack_impl(ppak->m_filepath))
                     return nullptr;
                 break;
             case mode::read_write: [[fallthrough]];
@@ -59,7 +61,7 @@ namespace pak
         return ppak;
     }
 
-    bool pack_i::new_entry(const wstring& name, const std::optional<filetime_t>& ft)
+    bool pack_i::new_entry(const wstring& name, const optional<filetime_t>& ft)
     {
         if (!m_opened_write)
             throw runtime_error("Pack not writeable.");

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/core/ignore_unused.hpp>
+#include <chrono>
 #ifndef _WIN32
 #include <limits.h>
 #endif
@@ -16,7 +17,7 @@ namespace
     auto rel_path_make(const fs::path& path, const fs::path& base_path)
     {
         auto subpath = path
-            | views::drop(distance(begin(base_path), end(base_path)) - 1)
+            | views::drop(distance(begin(base_path), end(base_path)))
             | views::transform([](const auto& v) { return to_lower_copy(v.wstring()); });
         
         return boost::join(vector(begin(subpath), end(subpath)), L"/");
@@ -71,7 +72,7 @@ namespace pak_impl
             m_base_path = path;
             return true;
         }
-        return false;
+        throw runtime_error("Could not create " + path.string());
     }
 
     bool fs_pack_c::open_entry_impl(size_t idx)
@@ -83,7 +84,13 @@ namespace pak_impl
     optional<pak::pack_i::filetime_t> fs_pack_c::entry_timestamp_impl(size_t idx) const
     {
         using namespace chrono;
-        return time_point_cast<seconds>(clock_cast<system_clock>(fs::last_write_time(m_files[idx].syspath)));
+        const auto ftime = clock_cast<system_clock>(fs::last_write_time(m_files[idx].syspath));
+        const auto ymd = year_month_day(floor<days>(ftime));
+        const auto tod = hh_mm_ss(ftime - floor<days>(ftime));
+        
+        return boost::posix_time::ptime(
+            { uint16_t(static_cast<int>(ymd.year())), uint16_t(static_cast<unsigned>(ymd.month())), uint16_t(static_cast<unsigned>(ymd.day()))},
+            { tod.hours().count(), tod.minutes().count(), tod.seconds().count() });
     }
     
     optional<size_t> fs_pack_c::new_entry_impl(const wstring& name, const std::optional<filetime_t>& ft)
@@ -99,7 +106,11 @@ namespace pak_impl
         m_files.back().path = to_lower_copy(name);
         m_files.back().syspath = boost::join(path_parts, sep);
 
-        m_outfile.open(m_files.back().syspath, ios::binary);
+        const auto fullpath = m_base_path / m_files.back().syspath;
+
+        fs::create_directories(fullpath.parent_path());
+
+        m_outfile.open(fullpath, ios::binary);
         if (m_outfile.is_open())
         {
             m_pending_ft = ft;
@@ -141,11 +152,21 @@ namespace pak_impl
 
     void fs_pack_c::close_write_impl()
     {
+        using namespace std::chrono;
         if (m_outfile.is_open())
         {
             m_outfile.close();
             if (m_pending_ft)
-                fs::last_write_time(m_files[*m_write_idx].syspath, chrono::file_clock::from_sys(*m_pending_ft));
+            {
+                const auto& ft = *m_pending_ft;
+
+                const auto zt = zoned_time{ current_zone(), local_days{ year_month_day{ year(ft.date().year()),
+                    month(ft.date().month()), day(ft.date().day()) } }
+                    + hours(ft.time_of_day().hours())
+                    + minutes(ft.time_of_day().minutes()) + seconds(ft.time_of_day().seconds()) };
+                
+                fs::last_write_time(m_base_path / m_files[*m_write_idx].syspath, chrono::file_clock::from_sys(zt.get_sys_time()));
+            }
             m_pending_ft.reset();
         }
     }

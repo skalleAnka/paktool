@@ -85,7 +85,7 @@ namespace pak_impl
                 m_pakfile.read(reinterpret_cast<char*>(&size), sizeof(size));
                 if (m_pakfile.gcount() != sizeof(size))
                     return false;
-                size = boost::endian::native_to_little(offset);
+                size = boost::endian::native_to_little(size);
 
                 m_files.emplace_back(entry_t{
                     .pos = offset,
@@ -158,14 +158,16 @@ namespace pak_impl
     {
         if (m_pakfile.is_open())
         {
-            const auto actrd = min(m_files[*m_read_idx].len - m_totread, sz);
-            m_pakfile.read(reinterpret_cast<char*>(buf), actrd);
-            if (m_pakfile.fail())
-                return 0;
-            
-            const auto r = static_cast<size_t>(m_pakfile.gcount());
-            m_totread += r;
-            return r;
+            if (const auto actrd = min(m_files[*m_read_idx].len - m_totread, sz); actrd > 0)
+            {
+                m_pakfile.read(reinterpret_cast<char*>(buf), actrd);
+                if (m_pakfile.fail())
+                    return 0;
+                
+                const auto r = static_cast<size_t>(m_pakfile.gcount());
+                m_totread += r;
+                return r;
+            }
         }
         return 0;
     }

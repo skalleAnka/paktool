@@ -1,6 +1,7 @@
 #include "pk3_pack.h"
 #include <boost/locale.hpp>
 #include <boost/core/ignore_unused.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <array>
 #include <tuple>
 #include <ranges>
@@ -10,17 +11,18 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    optional<pak::pack_i::filetime_t> convert_time(const tm_unz& ztime) noexcept
+    optional<pak::pack_i::filetime_t> convert_time(const tm_unz& ztime)
     {
-        using namespace chrono;
-
-        if (ztime.tm_year < 1980)
+        using namespace boost::posix_time;
+        using namespace boost::gregorian;
+        if (ztime.tm_year < 1980u)
             return {};
         
-        const auto dt = year_month_day{ year(ztime.tm_year), month(1 + ztime.tm_mon), day(ztime.tm_mday) };
-        const auto t = hh_mm_ss{ hours(ztime.tm_hour) + minutes(ztime.tm_min) + seconds(ztime.tm_sec) };
-
-        return sys_time<seconds>(sys_days{ dt } + t.to_duration());
+        return pak::pack_i::filetime_t
+        {
+            date{ uint16_t(ztime.tm_year), uint16_t(1 + ztime.tm_mon), uint16_t(ztime.tm_mday) },
+            hours(ztime.tm_hour) + minutes(ztime.tm_min) + seconds(ztime.tm_sec)
+        };
     }
 }
 
@@ -185,8 +187,7 @@ namespace pak_impl
 
     bool pk3_pack_c::create_pack_impl(const fs::path& path)
     {
-        const auto filename = boost::locale::conv::from_utf(path.wstring(), "");
-        m_zout = zipOpen2_64(filename.c_str(), APPEND_STATUS_CREATE, nullptr, &m_funcdef);
+        m_zout = zipOpen2_64(path.wstring().c_str(), APPEND_STATUS_CREATE, nullptr, &m_funcdef);
         
         return m_zout != nullptr;
     }
@@ -207,20 +208,18 @@ namespace pak_impl
     {
         const auto filename = boost::locale::conv::utf_to_utf<char, wchar_t>(name);
         
-        const auto ts = ft.has_value() ? *ft : chrono::utc_clock::to_sys(chrono::utc_clock::now());
-        const auto dt = chrono::year_month_day{ floor<chrono::days>(ts) };
-        const auto tod = chrono::hh_mm_ss{ ts.time_since_epoch() };
+        const auto ts = ft.has_value() ? *ft : boost::posix_time::second_clock::local_time();
         
         const zip_fileinfo zfi
         {
             .tmz_date =
             {
-                .tm_sec = static_cast<uInt>(tod.seconds().count()),
-                .tm_min = static_cast<uInt>(tod.minutes().count()),
-                .tm_hour = static_cast<uInt>(tod.hours().count()),
-                .tm_mday = static_cast<uInt>(dt.day()),
-                .tm_mon = static_cast<uInt>((dt.month())) - 1u,
-                .tm_year = static_cast<uInt>(static_cast<int>(dt.year()))   //lmao @ chrono
+                .tm_sec = static_cast<uInt>(ts.time_of_day().seconds()),
+                .tm_min = static_cast<uInt>(ts.time_of_day().minutes()),
+                .tm_hour = static_cast<uInt>(ts.time_of_day().hours()),
+                .tm_mday = static_cast<uInt>(ts.date().day()),
+                .tm_mon = static_cast<uInt>(ts.date().month() - 1u),
+                .tm_year = static_cast<uInt>(ts.date().year())
             },
             .dosDate = 0u, .internal_fa = 0u, .external_fa = 0u
         };
@@ -287,6 +286,7 @@ namespace pak_impl
         if (m_zout)
         {
             close_write_impl();
+            zipClose(m_zout, nullptr);
             m_zout = nullptr;
         }
         m_pakfile.close();
