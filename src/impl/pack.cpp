@@ -5,7 +5,9 @@
 #include "pakutil.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/locale.hpp>
+#include <boost/lexical_cast.hpp>
 #include <format>
+#include <regex>
 
 namespace fs = std::filesystem;
 using namespace std;
@@ -61,10 +63,40 @@ namespace pak
         return ppak;
     }
 
+    bool pack_i::next_output()
+    {
+        const auto name = m_filepath.filename().replace_extension(L"").string();
+        const regex re("^pak([0-9]+)$", regex_constants::icase);
+        std::smatch m;
+        if (regex_search(name, m, re) && m.size() == 2u)
+        {
+            const auto newnum = boost::lexical_cast<int>(m[1].str()) + 1;
+
+            auto filepath = m_filepath.parent_path()
+                / format("{}{}{}", name.substr(0, 3), newnum, m_filepath.filename().extension().string());
+
+            if (!fs::exists(filepath) && close_pack())
+            {
+                std::swap(filepath, m_filepath);
+                if (create_pack_impl(m_filepath))
+                    return true;
+                std::swap(filepath, m_filepath);
+            }
+        }
+
+        return false;
+    }
+
     bool pack_i::new_entry(const wstring& name, const optional<filetime_t>& ft)
     {
         if (!m_opened_write)
             throw runtime_error("Pack not writeable.");
+        
+        if (const auto n = max_file_count(); entry_count() >= n)
+        {
+            if (!next_output())
+                throw runtime_error(format("Maximum file count of {} reached in {}.", n, m_filepath.filename().string()));
+        }
         
         const auto filename = conv_separators(name);
 
@@ -73,10 +105,15 @@ namespace pak
         if (pak_impl::has_ctrl_chars(filename))
             emit_warning(filename, L"New entry name contains control characters.");
         
-        if (filename.length() > max_filename_len_impl())
+        if (const auto u8nm = boost::locale::conv::utf_to_utf<char, wchar_t>(filename);
+            u8nm.length() > max_filename_len_impl())
         {
             const auto str = format(L"File name {} too long. Maximum length is {}.", name, max_filename_len_impl());
             throw runtime_error(boost::locale::conv::from_utf(str, ""));
+        }
+        else if (u8nm.length() > 55u)
+        {
+            emit_warning(filename, format(L"File name {} too long for most Quake engines.", name));
         }
 
         if (auto e = find_entry(filename))

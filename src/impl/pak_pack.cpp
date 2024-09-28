@@ -256,7 +256,7 @@ namespace pak_impl
         return 55;
     }
 
-    size_t pak_pack_c::max_filename_count() const
+    size_t pak_pack_c::max_file_count() const
     {
         return 2048;
     }

@@ -20,7 +20,7 @@ namespace pak_impl
         void close_read_impl() override;
         void close_write_impl() override;
         size_t max_filename_len_impl() const override;
-        size_t max_filename_count() const override;
+        size_t max_file_count() const override;
         size_t entry_count() const override;
         const std::wstring& entry_name(size_t idx) const override;
     private:

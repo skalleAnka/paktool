@@ -308,7 +308,7 @@ namespace pak_impl
         return numeric_limits<uint16_t>::max() - 1;
     }
     
-    size_t pk3_pack_c::max_filename_count() const
+    size_t pk3_pack_c::max_file_count() const
     {
         return numeric_limits<uint32_t>::max();
     }

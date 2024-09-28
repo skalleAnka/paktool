@@ -184,7 +184,7 @@ namespace pak_impl
         return PATH_MAX;
     }
 
-    size_t fs_pack_c::max_filename_count() const
+    size_t fs_pack_c::max_file_count() const
     {
         return numeric_limits<size_t>::max();
     }

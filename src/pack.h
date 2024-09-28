@@ -35,10 +35,12 @@ namespace pak
         virtual void close_write_impl() = 0;
         virtual void close_read_impl() = 0;
         virtual size_t max_filename_len_impl() const = 0;
-        virtual size_t max_filename_count() const = 0;
+        virtual size_t max_file_count() const = 0;
         virtual bool close_pack_impl() = 0;
         virtual size_t entry_count() const = 0;
         virtual const std::wstring& entry_name(size_t idx) const = 0;
+
+        virtual bool next_output();
 
         void emit_warning(const std::wstring& entry, const std::wstring& message)
         {
