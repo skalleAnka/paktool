@@ -75,6 +75,10 @@ namespace pak
         size_t write(const std::uint8_t* data, size_t sz);
 
         bool close_pack();
+        size_t count() const noexcept
+        {
+            return m_file_idx.size();
+        }
 
         auto file_names() const
         {
