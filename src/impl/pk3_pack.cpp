@@ -1,4 +1,5 @@
 #include "pk3_pack.h"
+#include "pakutil.h"
 #include <boost/locale.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -23,6 +24,20 @@ namespace
             date{ uint16_t(ztime.tm_year), uint16_t(1 + ztime.tm_mon), uint16_t(ztime.tm_mday) },
             hours(ztime.tm_hour) + minutes(ztime.tm_min) + seconds(ztime.tm_sec)
         };
+    }
+
+    auto compression_level(const string& name) noexcept
+    {
+        auto nmv = name | views::reverse;
+        if (auto r = ranges::find(nmv, '.'); r != end(nmv))
+        {
+            constexpr array uncomp_ext = { "jpg"sv, "jpeg"sv, "png"sv, "mp3"sv, "ogg"sv, "opus"sv, "flac"sv };
+            //Skip compression of already compressed files
+            const auto ext = string_view{ r.base(), end(name) };
+            if (ranges::find(uncomp_ext, ext) != end(uncomp_ext)) 
+                return make_tuple(0, Z_NO_COMPRESSION);
+        }
+        return make_tuple(Z_DEFLATED, Z_BEST_COMPRESSION);
     }
 }
 
@@ -206,6 +221,7 @@ namespace pak_impl
 
     optional<size_t> pk3_pack_c::new_entry_impl(const wstring& name, const std::optional<filetime_t>& ft)
     {
+        static constexpr auto utf8_filename_flag = 1u << 11;
         const auto filename = boost::locale::conv::utf_to_utf<char, wchar_t>(name);
         
         const auto ts = ft.has_value() ? *ft : boost::posix_time::second_clock::local_time();
@@ -221,11 +237,12 @@ namespace pak_impl
                 .tm_mon = static_cast<uInt>(ts.date().month() - 1u),
                 .tm_year = static_cast<uInt>(ts.date().year())
             },
-            .dosDate = 0u, .internal_fa = 0u, .external_fa = 0u
+            .dosDate = 0u, .internal_fa = 0u, .external_fa = is_ascii(filename) ? 0u : utf8_filename_flag
         };
-            
+        
+        const auto [method, level] = compression_level(filename);
         if (zipOpenNewFileInZip64(m_zout, filename.c_str(), &zfi, nullptr, 0u,
-            nullptr, 0u, nullptr, Z_DEFLATED, Z_BEST_COMPRESSION, 0) == ZIP_OK)
+            nullptr, 0u, nullptr, method, level, 0) == ZIP_OK)
         {
             m_files.emplace_back(entry_t{ .name = name, .ts = {} });
             return m_files.size() -1;
