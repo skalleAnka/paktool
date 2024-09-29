@@ -7,3 +7,5 @@ find_package(Boost COMPONENTS program_options REQUIRED)
 add_executable(paktool ${PAKTOOL_SRC})
 target_include_directories(paktool PRIVATE ../src)
 target_link_libraries(paktool paklib Boost::program_options)
+
+install(TARGETS paktool DESTINATION bin)
