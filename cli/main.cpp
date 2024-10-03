@@ -231,13 +231,16 @@ int main(int argc, char** argv)
 
     try
     {
-        if (vm.count("list") > 0 && vm.count("input") > 0)
+        if (vm.count("help") > 0)
+        {
+            cout << desc << endl;
+        }
+        else if (vm.count("list") > 0 && vm.count("input") > 0)
         {
             if (auto r = list_pack(vm["input"].as<vector<string>>()); r != 0)
                 return r;
         }
-
-        if (vm.count("convert") > 0)
+        else if (vm.count("convert") > 0)
         {
             if (vm.count("input") <= 0)
             {
@@ -280,6 +283,12 @@ int main(int argc, char** argv)
                 cerr << "Specify 2 imput files to compare with -i." << endl;
                 return 1;
             }
+        }
+        else
+        {
+            cerr << "Invalid options." << endl;
+            cout << endl << desc << endl;
+            return 1;
         }
 
     }
