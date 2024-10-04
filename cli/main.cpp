@@ -207,7 +207,7 @@ static int extract_pack(const vector<string>& inpack, const string& outpack)
         | views::transform([&](const auto& v)
             { return make_tuple(v, (outpack / fs::path(v).filename().replace_extension(L""))); }))
     {
-        if (auto r = convert_pack({ inp }, outp); r != 0)
+        if (auto r = convert_pack({ inp }, outp.string()); r != 0)
             return r;
     }
     return 0;

@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    "boost-date-time",
+    "boost-program-options",
+    "boost-locale",
+    "boost-crc",
+    "boost-endian",
+    "minizip"
+  ]
+}
