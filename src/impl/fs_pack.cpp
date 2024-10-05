@@ -4,8 +4,10 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <chrono>
-#ifndef _WIN32
 #include <limits.h>
+#if defined(_MSC_VER) and not defined(PATH_MAX)
+#include <cstdlib>
+static constexpr size_t PATH_MAX = _MAX_PATH;
 #endif
 
 namespace fs = std::filesystem;
@@ -16,11 +18,22 @@ namespace
 {
     auto rel_path_make(const fs::path& path, const fs::path& base_path)
     {
+#ifndef _MSC_VER
+        //Not good enough for MSVC
         auto subpath = path
             | views::drop(distance(begin(base_path), end(base_path)))
             | views::transform([](const auto& v) { return to_lower_copy(v.wstring()); });
         
         return boost::join(vector(begin(subpath), end(subpath)), L"/");
+#else
+        vector<wstring> path_parts;
+        ranges::copy(ranges::subrange(begin(path), end(path))
+            | views::drop(distance(begin(base_path), end(base_path)))
+            | views::transform([](const auto& v) { return to_lower_copy(v.wstring());}),
+            back_inserter(path_parts));
+
+        return boost::join(path_parts, L"/");
+#endif
     }
 
     auto list_dir_contents(const fs::path& dir, const fs::path& base_path)
@@ -55,13 +68,13 @@ namespace pak_impl
 
     void fs_pack_c::read_contents(const fs::path& path, const std::filesystem::path& base_path)
     {
-        auto [files, dirs] = list_dir_contents(path, base_path);
+        /*auto [files, dirs] = list_dir_contents(path, base_path);
     
         ranges::transform(files, back_inserter(m_files),
             [](const auto& v){ return entry_t(v); });
             
         for (const auto& dir : dirs)
-            read_contents(dir, base_path);
+            read_contents(dir, base_path);*/
     }
     
     bool fs_pack_c::create_pack_impl(const fs::path& path)
@@ -165,7 +178,7 @@ namespace pak_impl
                     + hours(ft.time_of_day().hours())
                     + minutes(ft.time_of_day().minutes()) + seconds(ft.time_of_day().seconds()) };
                 
-                fs::last_write_time(m_base_path / m_files[*m_write_idx].syspath, chrono::file_clock::from_sys(zt.get_sys_time()));
+                fs::last_write_time(m_base_path / m_files[*m_write_idx].syspath, chrono::clock_cast<fs::file_time_type::clock>(zt.get_sys_time()));
             }
             m_pending_ft.reset();
         }

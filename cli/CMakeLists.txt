@@ -23,3 +23,7 @@ target_include_directories(paktool PRIVATE ../src)
 target_link_libraries(paktool paklib Boost::program_options)
 
 install(TARGETS paktool DESTINATION bin)
+
+if (WIN32)
+    install(FILES $<TARGET_RUNTIME_DLLS:paktool> DESTINATION bin)
+endif()

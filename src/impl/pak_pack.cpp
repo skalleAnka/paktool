@@ -17,14 +17,14 @@ namespace
     {
         //Let's hope it's ascii
         if (pak_impl::is_ascii(str))
-            return boost::locale::conv::to_utf<wchar_t>(string{ str }, "ASCII");
+            return boost::locale::conv::to_utf<wchar_t>(string{ str }, "Latin1");
         
         try
         {
             //Maybe someone stored it as utf-8?
             return boost::locale::conv::utf_to_utf<wchar_t, char>(string{ str });
         }
-        catch (const boost::locale::conv::conversion_error& e)
+        catch (const boost::locale::conv::conversion_error& )
         {
         }
         //It must be some legacy encoding and we can't tell which so we guess Win1252
