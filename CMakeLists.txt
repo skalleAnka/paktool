@@ -22,6 +22,10 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     endif()
 endif()
 
+if (MINGW)
+    set(CMAKE_EXE_LINKER_FLAGS "-static -static-libgcc -static-libstdc++ -static-libgfortran")
+endif()
+
 include(FetchContent)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries")
 set(BOOST_COMPONENTS program_options locale date_time endian crc)
@@ -42,8 +46,6 @@ if (MISSING_BOOST_COMPONENTS)
     FetchContent_Declare(
         Boost
         URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-cmake.7z 
-        #GIT_REPOSITORY https://github.com/boostorg/boost.git
-        #GIT_TAG boost-1.80.0
         OVERRIDE_FIND_PACKAGE
         URL_HASH SHA256=ee6e0793b5ec7d13e7181ec05d3b1aaa23615947295080e4b9930324488e078f
     )
