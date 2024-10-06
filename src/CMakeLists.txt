@@ -14,6 +14,8 @@ endif()
 
 find_package(Boost COMPONENTS ${BOOST_COMPONENTS_LIBPAK} REQUIRED)
 
+set(ZLIB_BUILD_EXAMPLES OFF)
+
 FetchContent_Declare(
     zlib
     URL https://github.com/madler/zlib/archive/refs/tags/v1.3.1.zip
