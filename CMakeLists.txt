@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.27)
-cmake_policy(SET CMP0144 NEW)
+cmake_minimum_required(VERSION 3.25)
 cmake_policy(SET CMP0135 NEW)
 
 project(paktool VERSION 1.0)
@@ -28,7 +27,7 @@ endif()
 
 include(FetchContent)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries")
-set(BOOST_COMPONENTS program_options locale date_time endian crc)
+set(BOOST_COMPONENTS program_options locale date_time headers)
 
 find_package(Boost COMPONENTS ${BOOST_COMPONENTS} QUIET)
 
@@ -62,7 +61,7 @@ add_subdirectory(cli)
 if (EXISTS "/etc/debian_version")
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "skalleAnka")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libminizip1 (>= 1.1-8), libboost-program-options1.74.0, libboost-locale1.74.0, libboost-atomic1.74.0, libboost-chrono1.74.0, libboost-system1.74.0, libboost-thread1.74.0, libboost-date-time1.74.0, libicu72")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libboost-program-options1.74.0, libboost-locale1.74.0, libboost-atomic1.74.0, libboost-chrono1.74.0, libboost-system1.74.0, libboost-thread1.74.0, libboost-date-time1.74.0, libicu72")
 elseif (UNIX AND NOT APPLE)
     set(CPACK_GENERATOR "TGZ")
 else()

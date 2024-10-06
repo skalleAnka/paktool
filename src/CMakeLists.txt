@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 include(FetchContent)
 cmake_policy(SET CMP0135 NEW)
 
-find_package(Boost COMPONENTS locale date_time endian REQUIRED)
+find_package(Boost COMPONENTS locale date_time REQUIRED)
 
 FetchContent_Declare(
     zlib
@@ -27,7 +27,7 @@ file(GLOB LIBPAKTOOL_SRC CONFIGURE_DEPENDS "*.h" "*.cpp" "impl/*.cpp" "impl/*.h"
 
 add_library(paklib ${LIBPAKTOOL_SRC})
 set_target_properties(paklib PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(paklib PUBLIC Boost::locale Boost::date_time Boost::endian)
+target_link_libraries(paklib PUBLIC Boost::locale Boost::date_time Boost::headers)
 
 target_include_directories(paklib PRIVATE "${zlib_SOURCE_DIR}/contrib")
 target_link_libraries(paklib PUBLIC custom_minizip)
