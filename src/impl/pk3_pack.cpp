@@ -12,13 +12,11 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    using ztm_int = decltype(tm_unz::tm_year);  //They kept changing values in time structs around from unsigned to signed
-
     optional<pak::pack_i::filetime_t> convert_time(const tm_unz& ztime)
     {
         using namespace boost::posix_time;
         using namespace boost::gregorian;
-        if (ztime.tm_year < static_cast<ztm_int>(1980))
+        if (ztime.tm_year < static_cast<int>(1980))
             return {};
         
         return pak::pack_i::filetime_t
@@ -232,12 +230,12 @@ namespace pak_impl
         {
             .tmz_date =
             {
-                .tm_sec = static_cast<ztm_int>(ts.time_of_day().seconds()),
-                .tm_min = static_cast<ztm_int>(ts.time_of_day().minutes()),
-                .tm_hour = static_cast<ztm_int>(ts.time_of_day().hours()),
-                .tm_mday = static_cast<ztm_int>(ts.date().day()),
-                .tm_mon = static_cast<ztm_int>(ts.date().month() - 1u),
-                .tm_year = static_cast<ztm_int>(ts.date().year())
+                .tm_sec = static_cast<int>(ts.time_of_day().seconds()),
+                .tm_min = static_cast<int>(ts.time_of_day().minutes()),
+                .tm_hour = static_cast<int>(ts.time_of_day().hours()),
+                .tm_mday = static_cast<int>(ts.date().day()),
+                .tm_mon = static_cast<int>(ts.date().month() - 1u),
+                .tm_year = static_cast<int>(ts.date().year())
             },
             .dosDate = 0u, .internal_fa = 0u, .external_fa = is_ascii(filename) ? 0u : utf8_filename_flag
         };
