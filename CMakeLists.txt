@@ -31,6 +31,12 @@ set(BOOST_COMPONENTS program_options locale date_time headers)
 
 find_package(Boost COMPONENTS ${BOOST_COMPONENTS} QUIET)
 
+if (Boost_locale_FOUND AND NOT Boost_HEADERS_FOUND OR NOT Boost_locale_FOUND)
+    #At some point they split the headers package into separate packages
+    set(BOOST_COMPONENTS program_options locale date_time crc endian)
+    find_package(Boost COMPONENTS ${BOOST_COMPONENTS} QUIET)
+endif()
+
 foreach (component IN LISTS BOOST_COMPONENTS)
     if (NOT Boost_${component}_FOUND)
         list(APPEND MISSING_BOOST_COMPONENTS ${component})

@@ -1,8 +1,17 @@
 cmake_minimum_required(VERSION 3.12)
 
 file(GLOB PAKTOOL_SRC CONFIGURE_DEPENDS "*.h" "*.cpp")
+set(BOOST_COMPONENTS_CLI program_options headers)
+set(BOOST_LINK_TARGETS_CLI Boost::program_options Boost::headers)
 
-find_package(Boost COMPONENTS program_options headers REQUIRED)
+find_package(Boost COMPONENTS BOOST_COMPONENTS_CLI QUIET)
+if (NOT Boost_HEADERS_FOUND)
+    #At some point they split the headers package into separate packages
+    set(BOOST_COMPONENTS_CLI program_options crc)
+    set(BOOST_LINK_TARGETS_CLI Boost::program_options Boost::crc)
+endif()
+
+find_package(Boost COMPONENTS ${BOOST_COMPONENTS_CLI} REQUIRED)
 
 if (UNIX)
     find_program(PANDOC_EXE pandoc)
@@ -20,7 +29,7 @@ endif()
 
 add_executable(paktool ${PAKTOOL_SRC})
 target_include_directories(paktool PRIVATE ../src)
-target_link_libraries(paktool paklib Boost::program_options Boost::headers)
+target_link_libraries(paktool paklib ${BOOST_LINK_TARGETS_CLI})
 
 install(TARGETS paktool DESTINATION bin)
 
