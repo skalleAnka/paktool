@@ -1,45 +1,6 @@
-cmake_minimum_required(VERSION 3.12)
-
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
-    if (MINGW)
-        set(VCPKG_TARGET_TRIPLET "arm64-mingw-static")
-    elseif (WIN32)
-        set(VCPKG_TARGET_TRIPLET "arm64-windows-static")
-    endif()
-else()
-    if (MINGW)
-        set(VCPKG_TARGET_TRIPLET "x64-mingw-static")
-    elseif (WIN32)
-        set(VCPKG_TARGET_TRIPLET "x64-windows-static")
-    endif()
-endif()
-
-set(ENV{VCPKG_TARGET_TRIPLET} ${VCPKG_TARGET_TRIPLET})
-
-
-if (NOT VCPKG_DIR AND NOT UNIX)    
-    if (NOT DEFINED ENV{VCPKG_ROOT})
-        set(VCPKG_DIR ${CMAKE_BINARY_DIR}/vcpkg)   
-        set(VCPKG_ROOT ${VCPKG_DIR})
-        if (NOT EXISTS "${CMAKE_BINARY_DIR}/vcpkg.zip")
-            message(STATUS "Downloading vcpkg...${VCPKG_DIR}")
-            file(DOWNLOAD "https://github.com/microsoft/vcpkg/archive/refs/heads/master.zip" "${CMAKE_BINARY_DIR}/vcpkg.zip")
-            execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_BINARY_DIR}/vcpkg.zip")
-            file(RENAME "${CMAKE_BINARY_DIR}/vcpkg-master" "${VCPKG_DIR}")
-            execute_process(COMMAND ${CMAKE_COMMAND} -E chdir ${VCPKG_DIR} bootstrap-vcpkg.bat)
-        endif()
-    else()
-        #Site install of VCPKG seems to be present
-        set(VCPKG_ROOT ENV{VCPKG_ROOT})
-    endif()
-else()
-    set(VCPKG_MANIFEST_MODE OFF)
-endif()
-
-if (VCPKG_ROOT)    
-    set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
-    set(VCPKG_MANIFEST_MODE ON)
-endif()
+cmake_minimum_required(VERSION 3.27)
+cmake_policy(SET CMP0144 NEW)
+cmake_policy(SET CMP0135 NEW)
 
 project(paktool VERSION 1.0)
 set(CMAKE_CXX_STANDARD 20)
@@ -59,6 +20,36 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.11)
         message(FATAL_ERROR "MSVC version must be at least 16.11")
     endif()
+endif()
+
+include(FetchContent)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries")
+set(BOOST_COMPONENTS program_options locale date_time endian crc)
+
+find_package(Boost COMPONENTS ${BOOST_COMPONENTS} QUIET)
+
+foreach (component IN LISTS BOOST_COMPONENTS)
+    if (NOT Boost_${component}_FOUND)
+        list(APPEND MISSING_BOOST_COMPONENTS ${component})
+    endif()
+endforeach()
+
+if (MISSING_BOOST_COMPONENTS)
+    message(STATUS "Getting missing Boost components: ${MISSING_BOOST_COMPONENTS} (this will take time, be patient)")
+        
+    set(BOOST_ENABLE_CMAKE ON)
+    set(BOOST_INCLUDE_LIBRARIES ${MISSING_BOOST_COMPONENTS})
+    FetchContent_Declare(
+        Boost
+        URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-cmake.7z 
+        #GIT_REPOSITORY https://github.com/boostorg/boost.git
+        #GIT_TAG boost-1.80.0
+        OVERRIDE_FIND_PACKAGE
+        URL_HASH SHA256=ee6e0793b5ec7d13e7181ec05d3b1aaa23615947295080e4b9930324488e078f
+    )
+    FetchContent_MakeAvailable(Boost)
+
+    find_package(Boost REQUIRED COMPONENTS ${MISSING_BOOST_COMPONENTS})
 endif()
 
 add_compile_definitions(PRIVATE $<$<CONFIG:Debug>:_DEBUG=1>)

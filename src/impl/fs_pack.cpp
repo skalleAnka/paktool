@@ -68,13 +68,13 @@ namespace pak_impl
 
     void fs_pack_c::read_contents(const fs::path& path, const std::filesystem::path& base_path)
     {
-        /*auto [files, dirs] = list_dir_contents(path, base_path);
+        auto [files, dirs] = list_dir_contents(path, base_path);
     
         ranges::transform(files, back_inserter(m_files),
             [](const auto& v){ return entry_t(v); });
             
         for (const auto& dir : dirs)
-            read_contents(dir, base_path);*/
+            read_contents(dir, base_path);
     }
     
     bool fs_pack_c::create_pack_impl(const fs::path& path)
