@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.25)
 cmake_policy(SET CMP0135 NEW)
 
-project(paktool VERSION 1.0)
+include(version.cmake)
+project(paktool VERSION ${PAKTOOL_VERSION})
 set(CMAKE_CXX_STANDARD 20)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -75,7 +76,7 @@ else()
 endif()
 
 set(CPACK_PACKAGE_NAME "paktool")
-set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_VERSION ${PAKTOOL_VERSION})
 set(CPACK_PACKAGE_DESCRIPTION "Tool for converting and extracting .pak and .pk3 used by Quake engines.")
 set(CPACK_PACKAGE_CONTACT "thisemailis@fa.ke")
 

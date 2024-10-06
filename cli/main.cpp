@@ -5,6 +5,7 @@
 #include <future>
 #include <format>
 #include <pack.h>
+#include "paktoolver.h"
 
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
@@ -215,12 +216,12 @@ static int extract_pack(const vector<string>& inpack, const string& outpack)
  
 int main(int argc, char** argv)
 {
-    po::options_description desc("Usage");
+    po::options_description desc(format("Paktool {}.{}.{} usage", PAKTOOL_MAJOR, PAKTOOL_MINOR, PAKTOOL_PATCH));
     desc.add_options()
         ("help,h", "Display usage instructions.")
         ("input,i", po::value<vector<string>>(), "One or more input files or folders to process.")
         ("list,l", "List contents of the specified file.")
-        ("output,o", po::value<string>(), "Output file (or folder) to convert to (use with -c or -n).")
+        ("output,o", po::value<string>(), "Output file (or folder) to convert to (use with -c).")
         ("extract,x", "Extract the contents of the pack file, a new subfolder will be created and named after each pack.")
         ("convert,c", "Convert one or more packs to other formats. Output format determined by file extension.")
         ("compare", "Compare the contents of two packs. Exactly two -i parameters must be given.");
