@@ -59,6 +59,8 @@ static auto calc_chksums(const string& pack)
             uint8_t buf[0xFFFF];
             for (auto s = ppack->read(buf, size(buf)); s > 0; s = ppack->read(buf, size(buf)))
                 crc64.process_bytes(buf, s);
+            
+            ppack->close_read_entry();
         }
         
         return make_tuple(wstring{ nm }, crc64.checksum());
