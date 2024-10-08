@@ -228,12 +228,12 @@ int main(int argc, char** argv)
         ("convert,c", "Convert one or more packs to other formats. Output format determined by file extension.")
         ("compare", "Compare the contents of two packs. Exactly two -i parameters must be given.");
 
-    po::variables_map vm;
-    po::store(parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
-
     try
     {
+        po::variables_map vm;
+        po::store(parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+
         if (vm.count("help") > 0)
         {
             cout << desc << endl;
