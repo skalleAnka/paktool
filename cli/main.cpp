@@ -148,9 +148,20 @@ static int compare_packs(const string& pack1, const string& pack2)
 
 static int convert_pack(const vector<string>& inpack, const string& outpack)
 {
-    vector<unique_ptr<pack_i>> inpacks;
+    vector<tuple<unique_ptr<pack_i>, fs::path>> inpacks;
     ranges::transform(inpack, back_inserter(inpacks),
-        [](const auto& v) { return pack_i::open_pack(path_strip(v), pack_i::mode::read_only, &warn_func); });
+        [](const auto& v)
+        {
+            const auto p = path_strip(v);
+            return make_tuple(pack_i::open_pack(v, pack_i::mode::read_only, &warn_func), p);
+        });
+
+    if (auto failed = inpacks | views::filter([](const auto& v) { return get<0>(v) == nullptr; }); !failed.empty())
+    {
+        for (const auto& failpath : failed | views::values)
+            cerr << "Open failed: " << failpath << endl;
+        return 1;
+    }
     
     auto outp = pack_i::open_pack(path_strip(outpack), pack_i::mode::rw_new, warn_func);
     if (outp == nullptr)
@@ -159,21 +170,22 @@ static int convert_pack(const vector<string>& inpack, const string& outpack)
         return 1;
     }
 
-    if (!outp->pre_reserve(accumulate(begin(inpacks), end(inpacks), size_t(0),
+    auto pinputs = inpacks | views::keys;
+    if (!outp->pre_reserve(accumulate(begin(pinputs), end(pinputs), size_t(0),
         [](auto a, const auto& v) { return a + v->count(); })))
     {
         cerr << "Failed to reserve space in file " << outpack << endl;
         return 1;
     }
 
-    for (auto pinp = begin(inpacks); pinp != end(inpacks); ++pinp)
+    for (auto pinp = begin(pinputs); pinp != end(pinputs); ++pinp)
     {
         const auto& inp = *pinp;  
         for (const auto& filename : inp->file_names()
             | views::transform([](const auto& v) { return wstring{ v }; }))
         {
-            if (find_if(pinp + 1, end(inpacks),
-                [&](const auto& p) { return p->contains_entry(filename); }) != end(inpacks))
+            if (find_if(pinp + 1, end(pinputs),
+                [&](const auto& p) { return p->contains_entry(filename); }) != end(pinputs))
             {
                 //File will appear in a later pack so we skip the earlier occurance
                 continue;
