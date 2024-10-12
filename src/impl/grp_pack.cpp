@@ -1,7 +1,6 @@
 #include "grp_pack.h"
 #include "pakutil.h"
 #include <numeric>
-#include <regex>
 #include <boost/endian.hpp>
 #include <boost/locale.hpp>
 #include <boost/core/ignore_unused.hpp>
@@ -30,8 +29,6 @@ namespace pak_impl
         for (auto i = 0u; i < file_cnt; ++i)
         {
             char filenbuf[12];
-
-            m_pakfile.read(filenbuf, sizeof(filenbuf));
             if (read_file(m_pakfile, filenbuf) != sizeof(filenbuf))
                 return false;
             //It should really be ASCII only but who knows with old DOS files
@@ -75,7 +72,7 @@ namespace pak_impl
                 return {};
         }
 
-        if (!regex_match(name, wregex{ LR"(^[A-Za-z0-9]{1,8}\.[A-Za-z0-9]{0,3}$)" }))
+        if (!is_filename(name) || distance(ranges::find(name, L'.'), end(name)) != 4)
             emit_warning(name, L"Not a DOS 8.3 file name.");
 
         const auto idx = m_files.size();

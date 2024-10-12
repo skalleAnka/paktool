@@ -30,6 +30,15 @@ namespace pak_impl
             [](auto v) { return static_cast<int>(v); }) != end(str);
     }
 
+    constexpr bool is_filename(const std::ranges::forward_range auto& str) noexcept
+    requires std::is_convertible<std::iter_value_t<decltype(str)>, int>::value
+    {
+        constexpr std::array forbidden = { '\\', '/', ':', '*', '?', '"', '<', '>', '|' };
+        return std::ranges::find_if(str,
+            [fb = forbidden | std::ranges::views::transform([](auto c){ return static_cast<int>(c);}) ]
+            (auto v) { return std::ranges::find(fb, static_cast<int>(v)) != end(fb); }) == end(str);
+    }
+
     inline void write_file(output_stream auto& file, const void* data, std::streamsize sz)
     {
         file.write(reinterpret_cast<const char*>(data), sz);

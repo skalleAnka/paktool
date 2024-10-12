@@ -80,7 +80,7 @@ namespace pak_impl
             m_files.emplace_back(entry_t{
                 .pos = little_to_native(read_file<int32_t>(m_pakfile)),
                 .len = static_cast<size_t>(little_to_native(read_file<int32_t>(m_pakfile))), 
-                .name = to_lower_copy(from_text(buf))
+                .name = from_text(buf)
             });
 
         }

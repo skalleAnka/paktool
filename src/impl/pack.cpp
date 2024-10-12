@@ -112,7 +112,7 @@ namespace pak
                 throw runtime_error(format("Maximum file count of {} reached in {}.", n, m_filepath.filename().string()));
         }
         
-        const auto filename = boost::to_lower_copy(conv_separators(name));
+        const auto filename = conv_separators(name);
 
         if (!pak_impl::is_ascii(filename))
             emit_warning(filename, L"New entry name contains non-ASCII characters.");
