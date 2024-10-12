@@ -32,7 +32,7 @@ namespace pak_impl
             if (read_file(m_pakfile, filenbuf) != sizeof(filenbuf))
                 return false;
             //It should really be ASCII only but who knows with old DOS files
-            auto file_name = conv::to_utf<wchar_t>({ begin(filenbuf), ranges::find(filenbuf, '\0') }, "CP437");
+            auto file_name = conv::to_utf<wchar_t>({ begin(filenbuf), ranges::find(filenbuf, '\0') }, "IBM437");
             
             const auto filesz = native_to_little(read_file<uint32_t>(m_pakfile));
             const auto offs = i == 0 ? data_offs : m_files.back().pos + m_files.back().len;

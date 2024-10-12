@@ -175,7 +175,7 @@ namespace pak_impl
 
             m_files.back().name = (info.flag & (1u << 11))
                 ? boost::locale::conv::utf_to_utf<wchar_t, char>(filename.data())
-                : boost::locale::conv::to_utf<wchar_t>(filename.data(), "CP437");
+                : boost::locale::conv::to_utf<wchar_t>(filename.data(), "IBM437");
             
             if (m_files.back().name.ends_with('/'))
             {
