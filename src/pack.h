@@ -39,6 +39,7 @@ namespace pak
         virtual bool close_pack_impl() = 0;
         virtual size_t entry_count() const = 0;
         virtual const std::wstring& entry_name(size_t idx) const = 0;
+        virtual bool notify_add(size_t cnt);
 
         virtual bool next_output();
 
@@ -70,6 +71,12 @@ namespace pak
 
         void close_read_entry();
         void close_write_entry();
+        bool pre_reserve(size_t file_count)
+        {
+            if (m_opened_write && file_count > 0u)
+                return notify_add(file_count);
+            return file_count == 0u;
+        }
 
         size_t read(std::uint8_t* data, size_t sz);
         size_t write(const std::uint8_t* data, size_t sz);

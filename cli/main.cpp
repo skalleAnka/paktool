@@ -4,6 +4,7 @@
 #include <iostream>
 #include <future>
 #include <format>
+#include <numeric>
 #include <pack.h>
 #include "paktoolver.h"
 
@@ -157,6 +158,14 @@ static int convert_pack(const vector<string>& inpack, const string& outpack)
         cerr << "Open failed: " << outpack << endl;
         return 1;
     }
+
+    if (!outp->pre_reserve(accumulate(begin(inpacks), end(inpacks), size_t(0),
+        [](auto a, const auto& v) { return a + v->count(); })))
+    {
+        cerr << "Failed to reserve space in file " << outpack << endl;
+        return 1;
+    }
+
     for (auto pinp = begin(inpacks); pinp != end(inpacks); ++pinp)
     {
         const auto& inp = *pinp;  

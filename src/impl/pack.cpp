@@ -2,10 +2,12 @@
 #include "fs_pack.h"
 #include "pak_pack.h"
 #include "pk3_pack.h"
+#include "grp_pack.h"
 #include "pakutil.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/locale.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/core/ignore_unused.hpp>
 #include <format>
 #include <regex>
 
@@ -27,6 +29,8 @@ namespace pak
 {
     static constexpr auto PAK = L".pak";
     static constexpr auto PK3 = L".pk3";
+    static constexpr auto ZIP = L".zip";
+    static constexpr auto GRP = L".grp";
     //static
     unique_ptr<pack_i> pack_i::open_pack(const fs::path& path, mode m, warning_func_t warn_func)
     {
@@ -35,8 +39,10 @@ namespace pak
             ppak = make_unique<pak_impl::fs_pack_c>();
         else if (const auto ext = path.extension().wstring(); boost::iequals(ext, PAK))
             ppak = make_unique<pak_impl::pak_pack_c>();
-        else if (boost::iequals(ext, PK3))
+        else if (boost::iequals(ext, PK3) || boost::iequals(ext, ZIP))
             ppak = make_unique<pak_impl::pk3_pack_c>();
+        else if (boost::iequals(ext, GRP))
+            ppak = make_unique<pak_impl::grp_pack_c>();
         else if (ext.empty() && m == mode::rw_new && fs::is_directory(path.parent_path()))
             ppak = make_unique<pak_impl::fs_pack_c>();
 
@@ -61,6 +67,14 @@ namespace pak
             }
         }
         return ppak;
+    }
+
+    bool pack_i::notify_add(size_t cnt)
+    {
+        //Re-implement if the pack needs to allocate space in the file
+        //before a large add operation
+        boost::ignore_unused(cnt);
+        return m_opened_write;
     }
 
     bool pack_i::next_output()

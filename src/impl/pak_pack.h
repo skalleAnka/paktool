@@ -22,7 +22,9 @@ namespace pak_impl
         size_t max_file_count() const override;
         size_t entry_count() const override;
         const std::wstring& entry_name(size_t idx) const override;
-    private:
+
+        virtual bool read_header();
+
         std::fstream m_pakfile;
         size_t m_totread = 0;
         std::streamoff m_write_offs = 0;

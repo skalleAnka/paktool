@@ -43,61 +43,70 @@ namespace pak_impl
             oflags |= ios::out;
 
         m_pakfile.open(path, oflags);
-        if (m_pakfile.is_open())
+        if (!m_pakfile.is_open())
+            return false;
+        if (!read_header())
         {
-            char buf[4];
-            m_pakfile.read(buf, sizeof(buf));
-            if (m_pakfile.gcount() != sizeof(buf) || string_view{ buf, size(buf) } != PACK)
-                return false;
-            
-            int32_t ft_offset = 0, ft_size = 0;
-            m_pakfile.read(reinterpret_cast<char*>(&ft_offset), sizeof(ft_offset));
-            if (m_pakfile.gcount() != 4)
-                return false;
-            ft_offset = boost::endian::native_to_little(ft_offset);
-            m_write_offs = ft_offset;
-
-            m_pakfile.read(reinterpret_cast<char*>(&ft_size), sizeof(ft_size));
-            if (m_pakfile.gcount() != 4)
-                return false;
-            ft_size = boost::endian::native_to_little(ft_size);
-
-            const size_t file_cnt = ft_size / 64u;
-            m_files.reserve(file_cnt);
-
-            m_pakfile.seekg(ft_offset, ios::beg);
-            if (m_pakfile.fail())
-                return false;
-            
-            for (size_t i = 0; i < file_cnt; ++i)
-            {
-                char buf[56];
-                m_pakfile.read(buf, sizeof(buf));
-                if (m_pakfile.gcount() != sizeof(buf))
-                    return false;
-                
-                int32_t offset = 0, size = 0;
-                m_pakfile.read(reinterpret_cast<char*>(&offset), sizeof(offset));
-                if (m_pakfile.gcount() != sizeof(offset))
-                    return false;
-                offset = boost::endian::native_to_little(offset);
-
-                m_pakfile.read(reinterpret_cast<char*>(&size), sizeof(size));
-                if (m_pakfile.gcount() != sizeof(size))
-                    return false;
-                size = boost::endian::native_to_little(size);
-
-                m_files.emplace_back(entry_t{
-                    .pos = offset,
-                    .len = static_cast<size_t>(size), 
-                    .name = to_lower_copy(from_text(buf))
-                });
-
-            }
-
-            return true;
+            m_files.clear();
+            m_pakfile.close();
+            return false;
         }
-        return false;
+        return true;
+    }
+
+    bool pak_pack_c::read_header()
+    {
+        char buf[PACK.length()];
+        m_pakfile.read(buf, PACK.length());
+        if (m_pakfile.gcount() != sizeof(buf) || string_view{ buf, size(buf) } != PACK)
+            return false;
+        
+        int32_t ft_offset = 0, ft_size = 0;
+        m_pakfile.read(reinterpret_cast<char*>(&ft_offset), sizeof(ft_offset));
+        if (m_pakfile.gcount() != 4)
+            return false;
+        ft_offset = boost::endian::little_to_native(ft_offset);
+        m_write_offs = ft_offset;
+
+        m_pakfile.read(reinterpret_cast<char*>(&ft_size), sizeof(ft_size));
+        if (m_pakfile.gcount() != 4)
+            return false;
+        ft_size = boost::endian::little_to_native(ft_size);
+
+        const size_t file_cnt = ft_size / 64u;
+        m_files.reserve(file_cnt);
+
+        m_pakfile.seekg(ft_offset, ios::beg);
+        if (m_pakfile.fail())
+            return false;
+        
+        for (size_t i = 0; i < file_cnt; ++i)
+        {
+            char buf[56];
+            m_pakfile.read(buf, sizeof(buf));
+            if (m_pakfile.gcount() != sizeof(buf))
+                return false;
+            
+            int32_t offset = 0, size = 0;
+            m_pakfile.read(reinterpret_cast<char*>(&offset), sizeof(offset));
+            if (m_pakfile.gcount() != sizeof(offset))
+                return false;
+            offset = boost::endian::little_to_native(offset);
+
+            m_pakfile.read(reinterpret_cast<char*>(&size), sizeof(size));
+            if (m_pakfile.gcount() != sizeof(size))
+                return false;
+            size = boost::endian::little_to_native(size);
+
+            m_files.emplace_back(entry_t{
+                .pos = offset,
+                .len = static_cast<size_t>(size), 
+                .name = to_lower_copy(from_text(buf))
+            });
+
+        }
+
+        return true;
     }
 
     bool pak_pack_c::create_pack_impl(const fs::path& path)
@@ -136,7 +145,7 @@ namespace pak_impl
         return {};
     }
     
-    optional<size_t> pak_pack_c::new_entry_impl(const wstring& name, const std::optional<filetime_t>& ft)
+    optional<size_t> pak_pack_c::new_entry_impl(const wstring& name, const optional<filetime_t>& ft)
     {
         boost::ignore_unused(ft);
 
