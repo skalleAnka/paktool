@@ -9,7 +9,7 @@ paktool - Create, extract, convert and compare Quake/Quake 2/Quake 3 pack files.
 **paktool** [**-h** | **-x** | **-c** | **-l** | **-\-compare**] [**-i** *input_file*]... [**-o** *output_file*]
 
 # DESCRIPTION
-**paktool** is a tool that can be used to create, extract, compare, convert and list contents of pack files. It supports *.pak* from *Quake* and *Quake 2* as well as *pk3* from *Quake 3*. It does *not* support *.pak* files from *S!N* or *Daikatana*.
+**paktool** is a tool that can be used to create, extract, compare, convert and list contents of pack files. It supports *.pak* from *Quake* and *Quake 2* as well as *pk3* from *Quake 3*. It does *not* support *.pak* files from *S!N* or *Daikatana*. There is also support for *.grp* packs from Build engine games.
 
 The type of pack is inferred from file extensions given with **-i** and **-o**, and inputs or outputs without extensions are interpreted to be folders.
 
@@ -30,6 +30,8 @@ Action is selected by specifying one of **-h**, **-x**, **-c**, **-l** or **-\-c
 :	When multiple inputs are specified, it works like the Quake engines in the way that files in earlier inputs are ignored if they also exist in later inputs, and only the latest one will be converted to the new pack.
 
 :	Pak files have, by tradition, a file count limit of 2048 files. If converting to *.pak* and this limit is reached, more output *.pak* files will be created with increasing numbers if the output pack has the **pakN.pak** format, otherwise an error will be displayed.
+
+:   It's probably not that useful to try to convert from other formats to Build engine GRP files as those are restricted to DOS 8.3 file names without directories.
 
 **-l**, **-\-list**
 :	List contents of the packs specified with **-i**

@@ -81,6 +81,7 @@ namespace pak_impl
         const auto idx = m_files.size();
         m_files.emplace_back();
         m_files.back().name = name;
+        boost::to_upper(m_files.back().name);
         
         if (seek_write(m_pakfile, 0, ios::end))
         {

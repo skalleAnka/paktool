@@ -10,6 +10,8 @@
 namespace fs = std::filesystem;
 using namespace std;
 using boost::to_lower_copy;
+namespace conv = boost::locale::conv;
+using namespace boost::endian;
 
 namespace
 {
@@ -17,18 +19,18 @@ namespace
     {
         //Let's hope it's ascii
         if (pak_impl::is_ascii(str))
-            return boost::locale::conv::to_utf<wchar_t>(string{ str }, "Latin1");
+            return conv::to_utf<wchar_t>(string{ str }, "Latin1");
         
         try
         {
             //Maybe someone stored it as utf-8?
-            return boost::locale::conv::utf_to_utf<wchar_t, char>(string{ str });
+            return conv::utf_to_utf<wchar_t, char>(string{ str });
         }
-        catch (const boost::locale::conv::conversion_error& )
+        catch (const conv::conversion_error& )
         {
         }
         //It must be some legacy encoding and we can't tell which so we guess Win1252
-        return boost::locale::conv::to_utf<wchar_t>(string{ str }, "Windows-1252");
+        return conv::to_utf<wchar_t>(string{ str }, "Windows-1252");
     }
 }
 
@@ -57,50 +59,27 @@ namespace pak_impl
     bool pak_pack_c::read_header()
     {
         char buf[PACK.length()];
-        m_pakfile.read(buf, PACK.length());
-        if (m_pakfile.gcount() != sizeof(buf) || string_view{ buf, size(buf) } != PACK)
+        if (read_file(m_pakfile, buf) != sizeof(buf) || string_view{ buf, size(buf) } != PACK)
             return false;
         
-        int32_t ft_offset = 0, ft_size = 0;
-        m_pakfile.read(reinterpret_cast<char*>(&ft_offset), sizeof(ft_offset));
-        if (m_pakfile.gcount() != 4)
-            return false;
-        ft_offset = boost::endian::little_to_native(ft_offset);
-        m_write_offs = ft_offset;
-
-        m_pakfile.read(reinterpret_cast<char*>(&ft_size), sizeof(ft_size));
-        if (m_pakfile.gcount() != 4)
-            return false;
-        ft_size = boost::endian::little_to_native(ft_size);
+        const auto ft_offset = little_to_native(read_file<int32_t>(m_pakfile));
+        const auto ft_size = little_to_native(read_file<int32_t>(m_pakfile));
 
         const size_t file_cnt = ft_size / 64u;
         m_files.reserve(file_cnt);
 
-        m_pakfile.seekg(ft_offset, ios::beg);
-        if (m_pakfile.fail())
+        if (!seek_read(m_pakfile, ft_offset))
             return false;
         
         for (size_t i = 0; i < file_cnt; ++i)
         {
             char buf[56];
-            m_pakfile.read(buf, sizeof(buf));
-            if (m_pakfile.gcount() != sizeof(buf))
+            if (read_file(m_pakfile, buf) != sizeof(buf))
                 return false;
-            
-            int32_t offset = 0, size = 0;
-            m_pakfile.read(reinterpret_cast<char*>(&offset), sizeof(offset));
-            if (m_pakfile.gcount() != sizeof(offset))
-                return false;
-            offset = boost::endian::little_to_native(offset);
-
-            m_pakfile.read(reinterpret_cast<char*>(&size), sizeof(size));
-            if (m_pakfile.gcount() != sizeof(size))
-                return false;
-            size = boost::endian::little_to_native(size);
 
             m_files.emplace_back(entry_t{
-                .pos = offset,
-                .len = static_cast<size_t>(size), 
+                .pos = little_to_native(read_file<int32_t>(m_pakfile)),
+                .len = static_cast<size_t>(little_to_native(read_file<int32_t>(m_pakfile))), 
                 .name = to_lower_copy(from_text(buf))
             });
 
@@ -115,27 +94,16 @@ namespace pak_impl
         if (!m_pakfile.is_open())
             return false;
         
-        m_pakfile.write(PACK.data(), PACK.length());
-        if (!m_pakfile.fail())
-        {
-            const int32_t placeholder = 0;
-            m_pakfile.write(reinterpret_cast<const char*>(&placeholder), sizeof(placeholder));
-            if (!m_pakfile.fail())
-                m_pakfile.write(reinterpret_cast<const char*>(&placeholder), sizeof(placeholder));
-            
-            m_write_offs = m_pakfile.tellp();
-            return !m_pakfile.fail();
-        }
-        return false;
+        write_file(m_pakfile, PACK);
+        write_file(m_pakfile, int32_t(0));
+        write_file(m_pakfile, int32_t(0));
+        m_write_offs = m_pakfile.tellp();
+        return true;
     }
 
     bool pak_pack_c::open_entry_impl(size_t idx)
     {
-        m_pakfile.seekg(m_files[idx].pos);
-        if (m_pakfile.fail())
-            m_pakfile.close();
-
-        return m_pakfile.is_open();
+        return seek_write(m_pakfile, m_files[idx].pos);
     }
 
     optional<pak::pack_i::filetime_t> pak_pack_c::entry_timestamp_impl(size_t idx) const
@@ -153,8 +121,7 @@ namespace pak_impl
         m_files.emplace_back();
         m_files.back().name = name;
         
-        m_pakfile.seekp(m_write_offs, ios::beg);
-        if (!m_pakfile.fail())
+        if (seek_write(m_pakfile, m_write_offs))
         {
             m_files.back().pos = m_pakfile.tellp();
             return idx;
@@ -169,11 +136,7 @@ namespace pak_impl
         {
             if (const auto actrd = min(m_files[*m_read_idx].len - m_totread, sz); actrd > 0)
             {
-                m_pakfile.read(reinterpret_cast<char*>(buf), actrd);
-                if (m_pakfile.fail())
-                    return 0;
-                
-                const auto r = static_cast<size_t>(m_pakfile.gcount());
+                const auto r = static_cast<size_t>(read_file(m_pakfile, buf, actrd));
                 m_totread += r;
                 return r;
             }
@@ -185,9 +148,7 @@ namespace pak_impl
     {
         if (m_pakfile.is_open())
         {
-            m_pakfile.write(reinterpret_cast<const char*>(buf), size);
-            if (m_pakfile.fail())
-                return 0;
+            write_file(m_pakfile, buf, size);
 
             m_files[*m_write_idx].len += size;
             if (m_files[*m_write_idx].len > numeric_limits<int32_t>::max())
@@ -220,7 +181,7 @@ namespace pak_impl
         vector<char> namebuf(1 + max_filename_len_impl());
         for (const auto& v : m_files)
         {
-            const auto entry = boost::locale::conv::utf_to_utf<char>(v.name);
+            const auto entry = conv::utf_to_utf<char>(v.name);
             if (entry.length() > max_filename_len_impl())
             {
                 throw runtime_error(format("Entry name too long: {} (max is {}).",
@@ -228,34 +189,21 @@ namespace pak_impl
             }
 
             fill(copy(begin(entry), end(entry), begin(namebuf)), end(namebuf), '\0');
-            m_pakfile.write(namebuf.data(), namebuf.size());
-            if (!m_pakfile.fail())
-            {
-                const auto offs = boost::endian::native_to_little(static_cast<int32_t>(v.pos));
-                m_pakfile.write(reinterpret_cast<const char*>(&offs), sizeof(offs));
-                if (!m_pakfile.fail())
-                {
-                    const auto sz = boost::endian::native_to_little(static_cast<int32_t>(v.len));
-                    m_pakfile.write(reinterpret_cast<const char*>(&sz), sizeof(sz));
-                }
-            }
+            write_file(m_pakfile, namebuf);
+            write_file(m_pakfile, native_to_little(static_cast<int32_t>(v.pos)));
+            write_file(m_pakfile, native_to_little(static_cast<int32_t>(v.len)));
         }
         m_pakfile.flush();
         if (!m_pakfile.fail())
         {
-            m_pakfile.seekp(PACK.length(), ios::beg);
-            if (!m_pakfile.fail())
+            if (seek_write(m_pakfile, PACK.length()))
             {
-                const auto diroffs = boost::endian::native_to_little(static_cast<int32_t>(final_pos));
-                const auto dirsize = boost::endian::native_to_little(static_cast<int32_t>(dir_size));
-                m_pakfile.write(reinterpret_cast<const char*>(&diroffs), sizeof(int32_t));
-                if (!m_pakfile.fail())
-                    m_pakfile.write(reinterpret_cast<const char*>(&dirsize), sizeof(int32_t));
+                write_file(m_pakfile, native_to_little(static_cast<int32_t>(final_pos)));
+                write_file(m_pakfile, boost::endian::native_to_little(static_cast<int32_t>(dir_size)));
             }
         }
         m_pakfile.flush();
-        m_pakfile.seekp(final_pos);
-        if (m_pakfile.fail())
+        if (!seek_write(m_pakfile, final_pos))
             throw runtime_error("Write fail.");
         m_write_offs = final_pos;
     }
