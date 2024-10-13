@@ -6,7 +6,7 @@
 paktool - Create, extract, convert and compare Quake/Quake 2/Quake 3 pack files.
 
 # SYNOPSIS
-**paktool** [**-h** | **-x** | **-c** | **-l** | **-\-compare**] [**-i** *input_file*]... [**-o** *output_file*] [**-\-filter** *filter*]
+**paktool** [**-h** | **-x** | **-c** | **-l** | **-\-compare**] [**-i** *input_file*...] [**-o** *output_file*] [**-\-filter** *filter*]
 
 # DESCRIPTION
 **paktool** is a tool that can be used to create, extract, compare, convert and list contents of pack files. It supports *.pak* from *Quake* and *Quake 2* as well as *pk3* from *Quake 3*. It does *not* support *.pak* files from *S!N* or *Daikatana*. There is also support for *.grp* packs from Build engine games.
@@ -52,19 +52,19 @@ Action is selected by specifying one of **-h**, **-x**, **-c**, **-l** or **-\-c
 **$ paktool -x -i /usr/share/quake/pak0.pak -o /home/bob** 
 :	Extract *pak0.pak* in */usr/share/quake* to a new folder *pak0* in */home/bob*.
 
-**$ paktool -c -i /usr/share/quake/pak0.pak -i /usr/share/quake/pak1.pak -o /home/bob/pak0.pk3** 
+**$ paktool -c -i /usr/share/quake/pak0.pak /usr/share/quake/pak1.pak -o /home/bob/pak0.pk3** 
 :	Convert *pak0.pak* and *pak1.pak* in */usr/share/quake* to a new merged file *pak0.pk3* in */home/bob*.
 
-**$ paktool -c -i /usr/share/quake/pak0.pak -i /usr/share/quake/pak1.pak -o /home/bob/mypack** 
+**$ paktool -c -i /usr/share/quake/pak0.pak /usr/share/quake/pak1.pak -o /home/bob/mypack** 
 :	Extract *pak0.pak* and *pak1.pak* in */usr/share/quake* to a new merged folder *mypack* in */home/bob*.
 
 **$ paktool -c -i pak0.pk3 -o /home/bob/pak0.pak** 
 :	Convert *pak0.pk3* in the current directory to a new file *pak0.pak* in */home/bob*.
 
-**$ paktool -\-compare -i /usr/share/quake/pak0.pak -i /home/bob/pak0.pk3** 
+**$ paktool -\-compare -i /usr/share/quake/pak0.pak /home/bob/pak0.pk3** 
 :	Compare *pak0.pak* in */usr/share/quake* to *pak0.pk3* in */home/bob*.
 
-**$ paktool -x -i pak0.pak -i pak1.pak -i pak2.pak -\-filter music/** 
+**$ paktool -x -i pak0.pak pak1.pak pak2.pak -\-filter music/** 
 :	Extract all files that contain the folder *music* from *pak0.pak*, *pak1.pak* and *pak2.pak*.
  
 

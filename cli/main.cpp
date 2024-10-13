@@ -257,7 +257,7 @@ int main(int argc, char** argv)
     po::options_description desc(format("Paktool {}.{}.{} usage", PAKTOOL_MAJOR, PAKTOOL_MINOR, PAKTOOL_PATCH));
     desc.add_options()
         ("help,h", "Display usage instructions.")
-        ("input,i", po::value<vector<string>>(), "One or more input files or folders to process.")
+        ("input,i", po::value<vector<string>>()->multitoken(), "One or more input files or folders to process.")
         ("list,l", "List contents of the specified file.")
         ("output,o", po::value<string>(), "Output file (or folder) to convert to (use with -c).")
         ("extract,x", "Extract the contents of the pack file, a new subfolder will be created and named after each pack.")
