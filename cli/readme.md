@@ -6,7 +6,7 @@
 paktool - Create, extract, convert and compare Quake/Quake 2/Quake 3 pack files.
 
 # SYNOPSIS
-**paktool** [**-h** | **-x** | **-c** | **-l** | **-\-compare**] [**-i** *input_file*]... [**-o** *output_file*]
+**paktool** [**-h** | **-x** | **-c** | **-l** | **-\-compare**] [**-i** *input_file*]... [**-o** *output_file*] [**-\-filter** *filter*]
 
 # DESCRIPTION
 **paktool** is a tool that can be used to create, extract, compare, convert and list contents of pack files. It supports *.pak* from *Quake* and *Quake 2* as well as *pk3* from *Quake 3*. It does *not* support *.pak* files from *S!N* or *Daikatana*. There is also support for *.grp* packs from Build engine games.
@@ -14,7 +14,7 @@ paktool - Create, extract, convert and compare Quake/Quake 2/Quake 3 pack files.
 The type of pack is inferred from file extensions given with **-i** and **-o**, and inputs or outputs without extensions are interpreted to be folders.
 
 # OPTIONS
-Action is selected by specifying one of **-h**, **-x**, **-c**, **-l** or **-\-compare**. One or more input files/directories are specified with **-i** and an output file/directory is specified with **-o**.
+Action is selected by specifying one of **-h**, **-x**, **-c**, **-l** or **-\-compare**. One or more input files/directories are specified with **-i** and an output file/directory is specified with **-o**. Filter operations for **-l**, **-x**, **-c** can be specified with **-\-filter**.
 
 **-h**, **-\-help**
 :	Display a short description of the options that can be used.
@@ -39,6 +39,9 @@ Action is selected by specifying one of **-h**, **-x**, **-c**, **-l** or **-\-c
 **-\-compare**
 :	Compare two packs specified with **-i**. This detects if a file is different in two packs, if the file exists under one or more different names in the other pack, or if it is missing altogether from one of them. The input packs don't need to be the same type and can be a folder.
 
+**-\-filter**
+:   When filtered, only file names that contain the specified string (case insensitive) will be considered. This can be used to, for example only extract certain files or folders.
+
 # EXAMPLES
 **$ paktool -l -i pak0.pak**
 :	Lists the contents of *pak0.pak* in the current directory to stdout.
@@ -60,6 +63,9 @@ Action is selected by specifying one of **-h**, **-x**, **-c**, **-l** or **-\-c
 
 **$ paktool -\-compare -i /usr/share/quake/pak0.pak -i /home/bob/pak0.pk3** 
 :	Compare *pak0.pak* in */usr/share/quake* to *pak0.pk3* in */home/bob*.
+
+**$ paktool -x -i pak0.pak -i pak1.pak -i pak2.pak -\-filter music/** 
+:	Extract all files that contain the folder *music* from *pak0.pak*, *pak1.pak* and *pak2.pak*.
  
 
 # NOTES

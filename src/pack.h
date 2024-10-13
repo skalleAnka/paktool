@@ -82,16 +82,20 @@ namespace pak
         size_t write(const std::uint8_t* data, size_t sz);
 
         bool close_pack();
-        size_t count() const noexcept
-        {
-            return m_file_idx.size();
-        }
-
-        auto file_names() const
+        auto file_names() const noexcept
         {
             return m_file_idx
                 | std::views::transform([this](auto v) { return std::wstring_view{ entry_name(v) }; }); 
         }
+
+        size_t count(std::function<bool(std::wstring_view)> filter = nullptr) const noexcept
+        {
+            if (filter == nullptr)
+                return m_file_idx.size();
+
+            auto files = std::views::filter(file_names(), filter);
+            return static_cast<size_t>(std::distance(std::begin(files), std::end(files)));
+        }        
 
         static std::unique_ptr<pack_i> open_pack(const std::filesystem::path& path, mode m, warning_func_t warn_func = nullptr);
     private:

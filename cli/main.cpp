@@ -1,5 +1,6 @@
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/locale.hpp>
 #include <boost/crc.hpp>
 #include <iostream>
 #include <future>
@@ -10,8 +11,13 @@
 
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
+namespace conv = boost::locale::conv;
 using namespace std;
 using namespace pak;
+
+
+template <typename Tfunc>
+concept file_filter = std::is_invocable_r_v<bool, Tfunc, wstring_view>;
 
 static void warn_func(const wstring& entry, const wstring& msg)
 {
@@ -23,15 +29,19 @@ static fs::path path_strip(const string& str)
     return fs::path(boost::trim_right_copy_if(str, [](auto c) { return c == fs::path::preferred_separator; }));
 }
 
-static int list_pack(const vector<string>& packs)
+static int list_pack(const vector<string>& packs, file_filter auto filter)
 {
-    for (const auto& name : packs)
+    for (const auto name : packs
+        | views::transform([](const auto& v) { return fs::path(v); }))
     {
         if (auto ppack = pack_i::open_pack(name, pack_i::mode::read_only, &warn_func))
         {
-            cout << name << ":" << endl;
-            for (const auto& ename : ppack->file_names())
+            for (const auto& ename : ppack->file_names() | views::filter(filter))
+            {
+                if (packs.size() > 1)
+                    wcout << name.filename().wstring() << L":";
                 wcout << " " << ename << endl;
+            }
         }
         else
         {
@@ -146,7 +156,7 @@ static int compare_packs(const string& pack1, const string& pack2)
     return results.empty() ? 0 : 1;
 }
 
-static int convert_pack(const vector<string>& inpack, const string& outpack)
+static int convert_pack(const vector<string>& inpack, const string& outpack, file_filter auto filter)
 {
     vector<tuple<unique_ptr<pack_i>, fs::path>> inpacks;
     ranges::transform(inpack, back_inserter(inpacks),
@@ -162,6 +172,13 @@ static int convert_pack(const vector<string>& inpack, const string& outpack)
             cerr << "Open failed: " << failpath << endl;
         return 1;
     }
+
+    auto pinputs = inpacks | views::keys;
+    const auto file_cnt = accumulate(begin(pinputs), end(pinputs), size_t(0),
+        [&](auto a, const auto& v) { return a + v->count(filter); });
+
+    if (file_cnt == 0)
+        return 0;
     
     auto outp = pack_i::open_pack(path_strip(outpack), pack_i::mode::rw_new, warn_func);
     if (outp == nullptr)
@@ -170,9 +187,7 @@ static int convert_pack(const vector<string>& inpack, const string& outpack)
         return 1;
     }
 
-    auto pinputs = inpacks | views::keys;
-    if (!outp->pre_reserve(accumulate(begin(pinputs), end(pinputs), size_t(0),
-        [](auto a, const auto& v) { return a + v->count(); })))
+    if (!outp->pre_reserve(file_cnt))
     {
         cerr << "Failed to reserve space in file " << outpack << endl;
         return 1;
@@ -181,7 +196,7 @@ static int convert_pack(const vector<string>& inpack, const string& outpack)
     for (auto pinp = begin(pinputs); pinp != end(pinputs); ++pinp)
     {
         const auto& inp = *pinp;  
-        for (const auto& filename : inp->file_names()
+        for (const auto& filename : inp->file_names() | views::filter(filter)
             | views::transform([](const auto& v) { return wstring{ v }; }))
         {
             if (find_if(pinp + 1, end(pinputs),
@@ -218,7 +233,7 @@ static int convert_pack(const vector<string>& inpack, const string& outpack)
     return 0;
 }
 
-static int extract_pack(const vector<string>& inpack, const string& outpack)
+static int extract_pack(const vector<string>& inpack, const string& outpack, file_filter auto filter)
 {
     const auto outdir = fs::path{ outpack };
     if (!fs::is_directory(outdir))
@@ -231,7 +246,7 @@ static int extract_pack(const vector<string>& inpack, const string& outpack)
         | views::transform([&](const auto& v)
             { return make_tuple(v, (outpack / fs::path(v).filename().replace_extension(L""))); }))
     {
-        if (auto r = convert_pack({ inp }, outp.string()); r != 0)
+        if (auto r = convert_pack({ inp }, outp.string(), filter); r != 0)
             return r;
     }
     return 0;
@@ -247,7 +262,8 @@ int main(int argc, char** argv)
         ("output,o", po::value<string>(), "Output file (or folder) to convert to (use with -c).")
         ("extract,x", "Extract the contents of the pack file, a new subfolder will be created and named after each pack.")
         ("convert,c", "Convert one or more packs to other formats. Output format determined by file extension.")
-        ("compare", "Compare the contents of two packs. Exactly two -i parameters must be given.");
+        ("compare", "Compare the contents of two packs. Exactly two -i parameters must be given.")
+        ("filter", po::value<string>(), "Filter for -l, -x, or -c, will match all files that contain the parameter anywhere.");
 
     try
     {
@@ -255,13 +271,26 @@ int main(int argc, char** argv)
         po::store(parse_command_line(argc, argv, desc), vm);
         po::notify(vm);
 
+        auto make_filter = [&]()
+        {
+            auto enc = boost::locale::util::get_system_locale();
+            if (auto r = ranges::find(enc, '.'); r != end(enc))
+                enc = { r + 1, end(enc) };
+
+            const auto s = vm.count("filter") > 0
+                ? conv::to_utf<wchar_t>(vm["filter"].as<string>(), enc)
+                : wstring{};
+
+            return [s](const wstring_view& v) { return s.empty() || boost::icontains(v, s); };
+        };
+
         if (vm.count("help") > 0)
         {
             cout << desc << endl;
         }
         else if (vm.count("list") > 0 && vm.count("input") > 0)
         {
-            if (auto r = list_pack(vm["input"].as<vector<string>>()); r != 0)
+            if (auto r = list_pack(vm["input"].as<vector<string>>(), make_filter()); r != 0)
                 return r;
         }
         else if (vm.count("convert") > 0)
@@ -278,7 +307,7 @@ int main(int argc, char** argv)
                 return 1;
             }
 
-            if (auto r = convert_pack(vm["input"].as<vector<string>>(), vm["output"].as<string>()); r != 0)
+            if (auto r = convert_pack(vm["input"].as<vector<string>>(), vm["output"].as<string>(), make_filter()); r != 0)
                 return r;
         }
         else if (vm.count("extract") > 0)
@@ -293,7 +322,7 @@ int main(int argc, char** argv)
                 return 1;
             }
 
-            if (auto r = extract_pack(vm["input"].as<vector<string>>(), outpath); r != 0)
+            if (auto r = extract_pack(vm["input"].as<vector<string>>(), outpath, make_filter()); r != 0)
                 return r;
         }
         else if (vm.count("compare") > 0)
