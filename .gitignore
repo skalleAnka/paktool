@@ -4,3 +4,4 @@ build/
 vcpkg-master/
 out/
 /CMakeSettings.json
+paktool-cppcheck-build-dir/

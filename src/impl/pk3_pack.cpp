@@ -192,8 +192,7 @@ namespace pak_impl
 
         if (w)
         {
-            const auto filename = boost::locale::conv::from_utf(path.wstring(), "");
-            m_zout = zipOpen2_64(filename.c_str(), APPEND_STATUS_ADDINZIP, nullptr, &m_funcdef);
+            m_zout = zipOpen2_64(path.wstring().c_str(), APPEND_STATUS_ADDINZIP, nullptr, &m_funcdef);
             if (m_zout == nullptr)
                 return cancelret();
         }

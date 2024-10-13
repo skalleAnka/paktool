@@ -73,14 +73,14 @@ namespace pak_impl
         
         for (size_t i = 0; i < file_cnt; ++i)
         {
-            char buf[56];
-            if (read_file(m_pakfile, buf) != sizeof(buf))
+            char nmbuf[56];
+            if (read_file(m_pakfile, nmbuf) != sizeof(nmbuf))
                 return false;
 
             m_files.emplace_back(entry_t{
                 .pos = little_to_native(read_file<int32_t>(m_pakfile)),
                 .len = static_cast<size_t>(little_to_native(read_file<int32_t>(m_pakfile))), 
-                .name = from_text(buf)
+                .name = from_text(nmbuf)
             });
 
         }
