@@ -15,6 +15,7 @@ endif()
 find_package(Boost COMPONENTS ${BOOST_COMPONENTS_LIBPAK} REQUIRED)
 
 set(ZLIB_BUILD_EXAMPLES OFF)
+set(SKIP_INSTALL_ALL ON)    #Zlibs blag for excluding from install
 
 FetchContent_Declare(
     zlib
