@@ -257,12 +257,11 @@ int main(int argc, char** argv)
     po::options_description desc(format("Paktool {}.{}.{} usage", PAKTOOL_MAJOR, PAKTOOL_MINOR, PAKTOOL_PATCH));
     desc.add_options()
         ("help,h", "Display usage instructions.")
-        ("input,i", po::value<vector<string>>()->multitoken(), "One or more input files or folders to process.")
-        ("list,l", "List contents of the specified file.")
+        ("list,l", po ::value<vector<string>>()->multitoken(), "List contents of the specified file(s).")
         ("output,o", po::value<string>(), "Output file (or folder) to convert to (use with -c).")
-        ("extract,x", "Extract the contents of the pack file, a new subfolder will be created and named after each pack.")
-        ("convert,c", "Convert one or more packs to other formats. Output format determined by file extension.")
-        ("compare", "Compare the contents of two packs. Exactly two -i parameters must be given.")
+        ("extract,x", po::value<vector<string>>()->multitoken(), "Extract the contents of the pack file, a new subfolder will be created and named after each pack.")
+        ("convert,c", po::value<vector<string>>()->multitoken(), "Convert one or more packs to other formats. Output format determined by file extension.")
+        ("compare", po::value<vector<string>>()->multitoken(), "Compare the contents of two packs. Exactly two -i parameters must be given.")
         ("filter", po::value<string>(), "Filter for -l, -x, or -c, will match all files that contain the parameter anywhere.");
 
     try
@@ -288,26 +287,20 @@ int main(int argc, char** argv)
         {
             cout << desc << endl;
         }
-        else if (vm.count("list") > 0 && vm.count("input") > 0)
+        else if (vm.count("list") > 0)
         {
-            if (auto r = list_pack(vm["input"].as<vector<string>>(), make_filter()); r != 0)
+            if (auto r = list_pack(vm["list"].as<vector<string>>(), make_filter()); r != 0)
                 return r;
         }
         else if (vm.count("convert") > 0)
         {
-            if (vm.count("input") <= 0)
-            {
-                cerr << "No input files to convert." << endl;
-                return 1;
-            }
-
             if (vm.count("output") <= 0)
             {
                 cerr << "No output file." << endl;
                 return 1;
             }
 
-            if (auto r = convert_pack(vm["input"].as<vector<string>>(), vm["output"].as<string>(), make_filter()); r != 0)
+            if (auto r = convert_pack(vm["convert"].as<vector<string>>(), vm["output"].as<string>(), make_filter()); r != 0)
                 return r;
         }
         else if (vm.count("extract") > 0)
@@ -316,26 +309,17 @@ int main(int argc, char** argv)
                 ? vm["output"].as<string>()
                 : fs::current_path().string();
 
-            if (vm.count("input") <= 0)
-            {
-                cerr << "No input files to extract." << endl;
-                return 1;
-            }
-
-            if (auto r = extract_pack(vm["input"].as<vector<string>>(), outpath, make_filter()); r != 0)
+            if (auto r = extract_pack(vm["extract"].as<vector<string>>(), outpath, make_filter()); r != 0)
                 return r;
         }
         else if (vm.count("compare") > 0)
         {
-            if (vm.count("input") > 0)
-            {
-                const auto cmp = vm["input"].as<vector<string>>();
-                if (cmp.size() == 2u)
-                    return compare_packs(cmp[0], cmp[1]);
+            const auto cmp = vm["compare"].as<vector<string>>();
+            if (cmp.size() == 2u)
+                return compare_packs(cmp[0], cmp[1]);
 
-                cerr << "Specify 2 imput files to compare with -i." << endl;
-                return 1;
-            }
+            cerr << "Specify 2 input files to compare with." << endl;
+            return 1;
         }
         else
         {
