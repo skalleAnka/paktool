@@ -25,10 +25,12 @@ The following C++ compilers are known to work:
 
 It has dependencies on **boost**, **zlib** and zlib's **minizip** component. If you don't have **boost** development libraries already available to CMake, the CMake script will download a suitable source archive from *boost.org* during configure, and build the relevant components. **Zlib** will always be downloaded from *zlib.org* by the configuration, as many systems don't have the relevant minizip package, have it under a strange name, or just have it plain broken like vcpkg minizip for MinGW.
 
+If you want the man page to be created, the **pandoc** package needs to be installed. If not installed, it will be skipped. A Windows build will always skip this part.
+
 Of course you can open the project folder in your favorite editor/IDE with CMake support and build it from there, but if you just want to build it and be done with it you can just open a command prompt in the project folder and run these commands:
 
 ```
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+cmake -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 ```
 The first command configures the build into a new sub-folder called **build**. The second command performs the build, after which you should be able to find the **paktool** executable in the folder **build/cli**.
@@ -36,7 +38,7 @@ The first command configures the build into a new sub-folder called **build**. T
 If the first step complains about your compiler version and you have another compiler on your system that you think might work instead, add the path to your alternative compiler like in this example:
 
 ```
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build -DCMAKE_CXX_COMPILER=/usr/bin/clang++-16
+cmake -DCMAKE_BUILD_TYPE=Release -B build -DCMAKE_CXX_COMPILER=/usr/bin/clang++-16
 ```
 
 There is an optional install step you can run that is mostly useful on Linux that will install the executable itself as well as a man page:

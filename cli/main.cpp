@@ -147,7 +147,7 @@ static int compare_packs(const string& pack1, const string& pack2)
     }
     else
     {
-        ranges::sort(results, {}, [](const auto& v) { return get<0>(v); });
+        ranges::sort(results);
 
         for (const auto& [filename, msg] : results)
             wcout << filename << L": " << msg << endl;
@@ -262,7 +262,7 @@ int main(int argc, char** argv)
         ("extract,x", po::value<vector<string>>()->multitoken(), "Extract the contents of the pack file, a new subfolder will be created and named after each pack.")
         ("convert,c", po::value<vector<string>>()->multitoken(), "Convert one or more packs to other formats. Output format determined by file extension.")
         ("compare", po::value<vector<string>>()->multitoken(), "Compare the contents of two packs. Exactly two -i parameters must be given.")
-        ("filter", po::value<string>(), "Filter for -l, -x, or -c, will match all files that contain the parameter anywhere.");
+        ("filter", po::value<string>(), "Filter for -l, -x, or -c, will match all files that contain the parameter anywhere in the name.");
 
     try
     {
